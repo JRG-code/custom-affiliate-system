@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and dashboard
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -736,3 +736,4 @@ public function process_registration() {
 // Initialize plugin
 
 Custom_Affiliate_System::get_instance();
+
