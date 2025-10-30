@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
- * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and dashboard
- * Version: 1.0.4
+ * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
+ * Version: 1.0.6
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -15,20 +15,22 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require 'plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/JRG-code/custom-affiliate-system/',
-    __FILE__,
-    'custom-affiliate-system'
-);
-
-// Para repo privado
-$myUpdateChecker->setAuthentication('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');
+// Auto-update from GitHub
+if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update-checker.php')) {
+    require plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update-checker.php';
+    
+    if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
+        $myUpdateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+            'https://github.com/JRG-code/custom-affiliate-system/',
+            __FILE__,
+            'custom-affiliate-system'
+        );
+        $myUpdateChecker->setAuthentication('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'); // Replace with token
+    }
+}
 
 // Define constants
-define('CAS_VERSION', '1.0.5');
+define('CAS_VERSION', '1.0.6');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -67,9 +69,9 @@ class Custom_Affiliate_System {
         $charset_collate = $wpdb->get_charset_collate();
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-
-        // Affiliates table - FORCE CREATE (the problematic one)
-        $sql1 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliates (
+        
+        // Affiliates table - FORCE CREATE
+        $sql1 = "CREATE TABLE {$wpdb->prefix}affiliates (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             affiliate_code varchar(50) NOT NULL UNIQUE,
@@ -87,7 +89,7 @@ class Custom_Affiliate_System {
             KEY status (status)
         ) $charset_collate;";
         
-        // Referrals table
+        // Referrals table - keep IF NOT EXISTS
         $sql2 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliate_referrals (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             affiliate_id bigint(20) NOT NULL,
@@ -104,7 +106,7 @@ class Custom_Affiliate_System {
             KEY status (status)
         ) $charset_collate;";
         
-        // Payouts table
+        // Payouts table - keep IF NOT EXISTS
         $sql3 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliate_payouts (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             affiliate_id bigint(20) NOT NULL,
@@ -136,24 +138,11 @@ class Custom_Affiliate_System {
                 'post_name' => 'become-an-affiliate'
             ));
         }
-        
-        // Create dashboard page
-        $dash_page = get_page_by_path('affiliate-dashboard');
-        if (!$dash_page) {
-            wp_insert_post(array(
-                'post_title' => 'Affiliate Dashboard',
-                'post_content' => '[affiliate_dashboard]',
-                'post_status' => 'publish',
-                'post_type' => 'page',
-                'post_name' => 'affiliate-dashboard'
-            ));
-        }
     }
     
     public function init() {
         // Register shortcodes
         add_shortcode('affiliate_registration', array($this, 'registration_shortcode'));
-        add_shortcode('affiliate_dashboard', array($this, 'dashboard_shortcode'));
         
         // Hooks
         add_action('user_register', array($this, 'auto_create_affiliate'), 10, 1);
@@ -165,9 +154,179 @@ class Custom_Affiliate_System {
         add_action('wp_ajax_request_affiliate_payout', array($this, 'handle_payout_request'));
         add_action('wp_ajax_toggle_affiliate_status', array($this, 'toggle_status_ajax'));
         add_action('wp_ajax_export_affiliate_data', array($this, 'export_data'));
+        
+        // WooCommerce My Account customization
+        add_action('init', array($this, 'add_my_account_endpoints'));
+        add_filter('woocommerce_account_menu_items', array($this, 'custom_my_account_menu'), 999);
+        add_action('woocommerce_account_affiliate-dashboard_endpoint', array($this, 'affiliate_dashboard_endpoint_content'));
+        add_action('woocommerce_account_dashboard_endpoint', array($this, 'dashboard_endpoint_content'));
+        
+        // Redirects
+        add_action('template_redirect', array($this, 'handle_my_account_redirects'));
+        add_filter('login_redirect', array($this, 'redirect_after_login'), 10, 3);
+        
+        // Enqueue assets
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
     }
     
-    // AUTO-CREATE AFFILIATE ON REGISTRATION
+    // === MY ACCOUNT CUSTOMIZATION ===
+    
+    public function add_my_account_endpoints() {
+        add_rewrite_endpoint('affiliate-dashboard', EP_ROOT | EP_PAGES);
+        flush_rewrite_rules();
+    }
+    
+    public function custom_my_account_menu($items) {
+        // Remove default items
+        unset($items['downloads']);
+        
+        // Reorder and customize
+        $new_items = array();
+        $new_items['dashboard'] = __('Dashboard', 'woocommerce');
+        $new_items['orders'] = __('Encomendas', 'woocommerce');
+        $new_items['affiliate-dashboard'] = __('Dashboard Influencer', 'custom-affiliate');
+        $new_items['edit-address'] = __('Endereços', 'woocommerce');
+        $new_items['edit-account'] = __('Detalhes da Conta', 'woocommerce');
+        $new_items['customer-logout'] = __('Sair', 'woocommerce');
+        
+        return $new_items;
+    }
+    
+    public function dashboard_endpoint_content() {
+        global $wpdb;
+        $user = wp_get_current_user();
+        
+        // Get affiliate data
+        $affiliate = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
+            get_current_user_id()
+        ));
+        
+        $total_orders = wc_get_customer_order_count(get_current_user_id());
+        
+        ?>
+        <div class="modern-dashboard-overview">
+            <h2>Olá, <?php echo esc_html($user->display_name); ?>! 👋</h2>
+            <p>Bem-vindo à tua conta. Aqui podes gerir as tuas encomendas e dados.</p>
+            
+            <?php if ($affiliate): ?>
+            <div class="quick-stats">
+                <div class="stat-box">
+                    <span class="stat-icon">🎟️</span>
+                    <div>
+                        <strong>O Teu Código</strong>
+                        <p class="stat-value"><?php echo esc_html($affiliate->affiliate_code); ?></p>
+                    </div>
+                </div>
+                
+                <div class="stat-box">
+                    <span class="stat-icon">💰</span>
+                    <div>
+                        <strong>Comissões a Receber</strong>
+                        <p class="stat-value"><?php echo number_format($affiliate->unpaid_commission, 2); ?>€</p>
+                    </div>
+                </div>
+                
+                <div class="stat-box">
+                    <span class="stat-icon">📦</span>
+                    <div>
+                        <strong>Encomendas</strong>
+                        <p class="stat-value"><?php echo $total_orders; ?></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="<?php echo wc_get_account_endpoint_url('orders'); ?>" class="button">Ver Encomendas</a>
+                <a href="<?php echo wc_get_account_endpoint_url('affiliate-dashboard'); ?>" class="button button-primary">Dashboard Influencer</a>
+            </div>
+            <?php endif; ?>
+        </div>
+        
+        <style>
+        .modern-dashboard-overview {
+            padding: 20px 0;
+        }
+        .modern-dashboard-overview h2 {
+            margin-bottom: 10px;
+        }
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .stat-icon {
+            font-size: 32px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 5px 0 0 0;
+        }
+        .dashboard-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .dashboard-actions .button {
+            padding: 12px 24px;
+            text-decoration: none;
+        }
+        </style>
+        <?php
+    }
+    
+    public function affiliate_dashboard_endpoint_content() {
+        // Load the modern affiliate dashboard template
+        $template_file = CAS_PLUGIN_DIR . 'templates/dashboard.php';
+        
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            echo '<p>Dashboard template not found.</p>';
+        }
+    }
+    
+    public function handle_my_account_redirects() {
+        // If not logged in and tries to access my-account -> redirect to login
+        if (!is_user_logged_in() && is_account_page()) {
+            wp_redirect(wp_login_url(wc_get_page_permalink('myaccount')));
+            exit;
+        }
+    }
+    
+    public function redirect_after_login($redirect_to, $request, $user) {
+        if (isset($user->roles) && is_array($user->roles)) {
+            return wc_get_page_permalink('myaccount');
+        }
+        return $redirect_to;
+    }
+    
+    public function enqueue_frontend_assets() {
+        if (is_account_page()) {
+            wp_enqueue_style('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.css', array(), CAS_VERSION);
+            wp_enqueue_script('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.js', array('jquery'), CAS_VERSION, true);
+            
+            wp_localize_script('cas-my-account', 'casMyAccount', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('payout_request')
+            ));
+        }
+    }
+    
+    // === AUTO-CREATE AFFILIATE ===
+    
     public function auto_create_affiliate($user_id) {
         global $wpdb;
         
@@ -175,15 +334,13 @@ class Custom_Affiliate_System {
         $username = $user->user_login;
         
         // Generate unique code
-        // if username generic user name (user123), instead of it
         if (preg_match('/^user\d+$/', $username)) {
-        // use 1st display_name
             $display_name = $user->display_name;
-              if (!empty($display_name)) {
-                 $first_name = explode(' ', $display_name)[0];
-                 $username = sanitize_user($first_name);
-    }
-}
+            if (!empty($display_name)) {
+                $first_name = explode(' ', $display_name)[0];
+                $username = sanitize_user($first_name);
+            }
+        }
 
         $affiliate_code = strtoupper($username) . '5';
         $counter = 1;
@@ -231,32 +388,32 @@ class Custom_Affiliate_System {
         
         $coupon_id = wp_insert_post($coupon);
         
-         update_post_meta($coupon_id, 'discount_type', 'fixed_cart'); //fixed value
-         update_post_meta($coupon_id, 'coupon_amount', '5'); // ← 5€ discount
-         update_post_meta($coupon_id, 'individual_use', 'yes');
-         update_post_meta($coupon_id, 'usage_limit', ''); // ← total is unlimited
-         update_post_meta($coupon_id, 'usage_limit_per_user', '1'); // ← 1 use per user
-         update_post_meta($coupon_id, 'expiry_date', '');
-         update_post_meta($coupon_id, 'free_shipping', 'no');
-         update_post_meta($coupon_id, '_affiliate_user_id', $user_id);
+        update_post_meta($coupon_id, 'discount_type', 'fixed_cart');
+        update_post_meta($coupon_id, 'coupon_amount', '5');
+        update_post_meta($coupon_id, 'individual_use', 'yes'); // FIXED: Cannot combine with other coupons
+        update_post_meta($coupon_id, 'usage_limit', '');
+        update_post_meta($coupon_id, 'usage_limit_per_user', '1');
+        update_post_meta($coupon_id, 'expiry_date', '');
+        update_post_meta($coupon_id, 'free_shipping', 'no');
+        update_post_meta($coupon_id, '_affiliate_user_id', $user_id);
         
         return $coupon_id;
     }
     
     private function send_welcome_email($user, $code) {
         $to = $user->user_email;
-        $subject = '🎉 Your Promo Code is Ready!';
+        $subject = 'O Teu Código de Afiliado está Pronto!';
         $message = "
         <html>
         <body style='font-family: Arial, sans-serif;'>
-            <h2>Welcome to Our Affiliate Program!</h2>
-            <p>Hi <strong>{$user->display_name}</strong>,</p>
+            <h2>Bem-vindo ao Programa de Influencers!</h2>
+            <p>Olá <strong>{$user->display_name}</strong>,</p>
             <div style='background: #f0f0f0; padding: 20px; margin: 20px 0; text-align: center;'>
-                <h1 style='color: #0073aa; font-size: 36px;'>{$code}</h1>
-                <p>👆 Your unique promo code</p>
+                <h1 style='color: #667eea; font-size: 36px;'>{$code}</h1>
+                <p>O teu código único promocional</p>
             </div>
-            <p>You earn 10% commission on every sale!</p>
-            <p><a href='" . home_url('/affiliate-dashboard/') . "' style='background: #0073aa; color: white; padding: 10px 20px; text-decoration: none;'>Go to Dashboard</a></p>
+            <p>Ganhas 10% de comissão em cada venda!</p>
+            <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "' style='background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;'>Ir para Dashboard</a></p>
         </body>
         </html>
         ";
@@ -267,20 +424,21 @@ class Custom_Affiliate_System {
     
     private function notify_admin_new_affiliate($user, $code) {
         $admin_email = get_option('admin_email');
-        $subject = '🎉 New Affiliate Registered!';
+        $subject = 'Novo Afiliado Registado!';
         $message = "
-        <h2>New Affiliate Joined!</h2>
-        <p><strong>Name:</strong> {$user->display_name}</p>
+        <h2>Novo Afiliado!</h2>
+        <p><strong>Nome:</strong> {$user->display_name}</p>
         <p><strong>Email:</strong> {$user->user_email}</p>
-        <p><strong>Code:</strong> {$code}</p>
-        <p><a href='" . admin_url('admin.php?page=affiliate-system') . "'>View Dashboard</a></p>
+        <p><strong>Código:</strong> {$code}</p>
+        <p><a href='" . admin_url('admin.php?page=affiliate-system') . "'>Ver Dashboard</a></p>
         ";
         
         $headers = array('Content-Type: text/html; charset=UTF-8');
         wp_mail($admin_email, $subject, $message, $headers);
     }
     
-    // TRACK COMMISSIONS
+    // === TRACK COMMISSIONS ===
+    
     public function track_commission($order_id) {
         global $wpdb;
         
@@ -361,26 +519,29 @@ class Custom_Affiliate_System {
     private function send_commission_email($user_id, $code, $total, $commission) {
         $user = get_userdata($user_id);
         $to = $user->user_email;
-        $subject = '💰 New Commission Earned!';
+        $subject = 'Nova Comissão Ganha!';
         $message = "
-        <h2>Cha-ching! 💰</h2>
-        <p>Someone just used your code <strong>{$code}</strong></p>
-        <p><strong>Order Total:</strong> $" . number_format($total, 2) . "</p>
-        <p><strong>Your Commission:</strong> $" . number_format($commission, 2) . "</p>
-        <p><a href='" . home_url('/affiliate-dashboard/') . "'>View Dashboard</a></p>
+        <h2>Parabéns!</h2>
+        <p>Alguém usou o teu código <strong>{$code}</strong></p>
+        <p><strong>Total da Encomenda:</strong> " . number_format($total, 2) . "€</p>
+        <p><strong>A Tua Comissão:</strong> " . number_format($commission, 2) . "€</p>
+        <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "'>Ver Dashboard</a></p>
         ";
         
         $headers = array('Content-Type: text/html; charset=UTF-8');
         wp_mail($to, $subject, $message, $headers);
     }
     
-    // PAYOUT REQUEST
+    // === PAYOUT REQUEST ===
+    
     public function handle_payout_request() {
         global $wpdb;
         
+        check_ajax_referer('payout_request', 'nonce');
+        
         $user_id = get_current_user_id();
         if (!$user_id) {
-            wp_send_json_error('Not logged in');
+            wp_send_json_error('Não autenticado');
         }
         
         $affiliate = $wpdb->get_row($wpdb->prepare(
@@ -389,54 +550,100 @@ class Custom_Affiliate_System {
         ));
         
         if (!$affiliate) {
-            wp_send_json_error('Not an affiliate');
+            wp_send_json_error('Afiliado não encontrado');
         }
         
-        $amount = $affiliate->unpaid_commission;
-        if ($amount < 50) {
-            wp_send_json_error('Minimum payout is $50');
+        // Check minimum
+        $min_payout = ($affiliate->tier === 'tier_1') ? 20 : 0;
+        if ($affiliate->unpaid_commission < $min_payout) {
+            wp_send_json_error('Valor mínimo não atingido');
         }
         
-        $method = sanitize_text_field($_POST['method']);
+        // Check for pending payout
+        $pending = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_payouts 
+            WHERE affiliate_id = %d AND status = 'pending'",
+            $affiliate->id
+        ));
+        
+        if ($pending > 0) {
+            wp_send_json_error('Já tens um pedido pendente');
+        }
+        
+        $payment_method = sanitize_text_field($_POST['payment_method']);
+        $payment_details = sanitize_textarea_field($_POST['payment_details']);
         $notes = sanitize_textarea_field($_POST['notes']);
+        $amount = $affiliate->unpaid_commission;
         
+        // Insert payout request
         $wpdb->insert(
             $wpdb->prefix . 'affiliate_payouts',
             array(
                 'affiliate_id' => $affiliate->id,
                 'amount' => $amount,
-                'method' => $method,
+                'method' => $payment_method,
                 'status' => 'pending',
-                'notes' => $notes
+                'notes' => "Método: {$payment_method}\nDetalhes: {$payment_details}\n" . (!empty($notes) ? "Notas: {$notes}" : "")
             ),
             array('%d', '%f', '%s', '%s', '%s')
         );
         
-        // Notify admin
+        // Send email to admin
         $user = get_userdata($user_id);
-        $admin_email = get_option('admin_email');
-        $subject = '💵 New Payout Request';
+        $admin_email = 'support@thecouplesbrand.com';
+        
+        $tier_names = array('tier_1' => 'Tier I', 'tier_2' => 'Tier II', 'ambassador' => 'Embaixador');
+        $tier_name = $tier_names[$affiliate->tier];
+        $payment_days = ($affiliate->tier === 'tier_1') ? '30 dias' : '3 dias';
+        
+        $subject = 'Novo Pedido de Levantamento - ' . $user->display_name;
         $message = "
-        New payout request:
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+        <h2>Novo Pedido de Transferência</h2>
         
-        Affiliate: {$user->display_name}
-        Amount: $" . number_format($amount, 2) . "
-        Method: {$method}
+        <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <p style='margin: 5px 0;'><strong>Afiliado:</strong> {$user->display_name}</p>
+            <p style='margin: 5px 0;'><strong>ID Cliente:</strong> {$user_id}</p>
+            <p style='margin: 5px 0;'><strong>Email:</strong> {$user->user_email}</p>
+            <p style='margin: 5px 0;'><strong>Código:</strong> {$affiliate->affiliate_code}</p>
+            <p style='margin: 5px 0;'><strong>Tier:</strong> {$tier_name}</p>
+        </div>
         
-        Review: " . admin_url('admin.php?page=affiliate-payouts');
+        <hr>
         
-        wp_mail($admin_email, $subject, $message);
+        <div style='background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <p style='margin: 5px 0; font-size: 18px;'><strong>Valor:</strong> " . number_format($amount, 2) . "€</p>
+            <p style='margin: 5px 0;'><strong>Método:</strong> {$payment_method}</p>
+            <p style='margin: 5px 0;'><strong>Detalhes de Pagamento:</strong></p>
+            <p style='margin: 5px 0; background: white; padding: 10px; border-radius: 4px;'>{$payment_details}</p>
+            " . (!empty($notes) ? "<p style='margin: 10px 0 5px 0;'><strong>Notas:</strong></p><p style='margin: 0; background: white; padding: 10px; border-radius: 4px;'>{$notes}</p>" : "") . "
+        </div>
         
-        wp_send_json_success('Payout request submitted!');
+        <p style='background: #fef3c7; padding: 15px; border-radius: 6px;'>
+            <strong>Prazo:</strong> Este afiliado deve receber o pagamento em até <strong>{$payment_days}</strong>.
+        </p>
+        
+        <p style='margin: 30px 0;'>
+            <a href='" . admin_url('admin.php?page=affiliate-payouts') . "' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Ver Pedidos Pendentes</a>
+        </p>
+        </body>
+        </html>
+        ";
+        
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($admin_email, $subject, $message, $headers);
+        
+        wp_send_json_success('Pedido enviado com sucesso! Receberás uma resposta em breve.');
     }
     
-    // REGISTRATION FORM
+    // === REGISTRATION FORM ===
+    
     public function registration_shortcode() {
         if (is_user_logged_in()) {
-            return '<p>Already registered. <a href="' . home_url('/affiliate-dashboard/') . '">Go to Dashboard</a></p>';
+            return '<p>Já estás registado. <a href="' . wc_get_page_permalink('myaccount') . '">Ir para Dashboard</a></p>';
         }
         
-        // Check if template file exists
         $template_file = CAS_PLUGIN_DIR . 'templates/registration-form.php';
         
         if (file_exists($template_file)) {
@@ -445,7 +652,6 @@ class Custom_Affiliate_System {
             return ob_get_clean();
         }
         
-        // Fallback inline template
         return $this->get_inline_registration_form();
     }
     
@@ -489,136 +695,105 @@ class Custom_Affiliate_System {
         </style>
         
         <div class="affiliate-reg-form">
-            <h2>🚀 Join Our Affiliate Program</h2>
+            <h2>Junta-te ao Programa de Influencers</h2>
             <p style="text-align: center; color: #666; margin-bottom: 30px;">
-                Earn 10% commission on every sale!
+                Ganha 10% de comissão em cada venda!
             </p>
             
             <form method="post" action="">
                 <?php wp_nonce_field('affiliate_registration', 'affiliate_reg_nonce'); ?>
                 
-                <input type="text" name="full_name" placeholder="Full Name" required>
-                <input type="email" name="user_email" placeholder="Email Address" required>
-                <input type="text" name="username" placeholder="Username (for your promo code)" required>
+                <input type="text" name="full_name" placeholder="Nome Completo" required>
+                <input type="email" name="user_email" placeholder="Email" required>
+                <input type="text" name="username" placeholder="Username (para o teu código)" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <input type="text" name="whatsapp" placeholder="WhatsApp (optional)">
-                <input type="text" name="instagram" placeholder="Instagram Handle (optional)">
+                <input type="text" name="whatsapp" placeholder="WhatsApp (opcional)">
+                <input type="text" name="instagram" placeholder="Instagram (opcional)">
                 
                 <label style="display: block; margin: 20px 0;">
                     <input type="checkbox" name="terms" required>
-                    I accept the terms and conditions
+                    Aceito os termos e condições
                 </label>
                 
-                <button type="submit" name="register_affiliate">Create Account & Get My Code</button>
+                <button type="submit" name="register_affiliate">Criar Conta e Receber Código</button>
             </form>
             
             <p style="text-align: center; margin-top: 20px;">
-                Already have an account? <a href="<?php echo wp_login_url(home_url('/affiliate-dashboard/')); ?>">Login</a>
+                Já tens conta? <a href="<?php echo wp_login_url(wc_get_page_permalink('myaccount')); ?>">Login</a>
             </p>
         </div>
         <?php
         return ob_get_clean();
     }
     
-    // REPLACE the process_registration function in custom-affiliate-system.php with this:
-
-public function process_registration() {
-    if (!isset($_POST['register_affiliate'])) {
-        return;
-    }
-    
-    // Verify nonce
-    if (!isset($_POST['affiliate_reg_nonce']) || !wp_verify_nonce($_POST['affiliate_reg_nonce'], 'affiliate_registration')) {
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Security check failed'), wp_get_referer()));
-        exit;
-    }
-    
-    // Sanitize inputs
-    $username = sanitize_user($_POST['username']);
-    $email = sanitize_email($_POST['user_email']);
-    $password = $_POST['password'];
-    $full_name = sanitize_text_field($_POST['full_name']);
-    
-    // Validate username
-    if (!validate_username($username)) {
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Invalid username. Use only letters, numbers and underscores.'), wp_get_referer()));
-        exit;
-    }
-    
-    // Check if username exists
-    if (username_exists($username)) {
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Username already taken. Please choose another.'), wp_get_referer()));
-        exit;
-    }
-    
-    // Check if email exists
-    if (email_exists($email)) {
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Email already registered. Try logging in instead.'), wp_get_referer()));
-        exit;
-    }
-    
-    // Validate email
-    if (!is_email($email)) {
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Invalid email address.'), wp_get_referer()));
-        exit;
-    }
-    
-    // Create user
-    $user_id = wp_create_user($username, $password, $email);
-    
-    if (is_wp_error($user_id)) {
-        $error_message = $user_id->get_error_message();
-        wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => urlencode($error_message)), wp_get_referer()));
-        exit;
-    }
-    
-    // Update user profile
-    wp_update_user(array(
-        'ID' => $user_id,
-        'display_name' => $full_name,
-        'first_name' => $full_name,
-        'role' => 'subscriber'
-    ));
-    
-    // Save optional fields
-    if (!empty($_POST['whatsapp'])) {
-        update_user_meta($user_id, 'whatsapp', sanitize_text_field($_POST['whatsapp']));
-    }
-    
-    if (!empty($_POST['instagram'])) {
-        update_user_meta($user_id, 'instagram', sanitize_text_field($_POST['instagram']));
-    }
-    
-    // Log user in automatically
-    wp_set_current_user($user_id);
-    wp_set_auth_cookie($user_id, true);
-    do_action('wp_login', $username, get_userdata($user_id));
-    
-    // Redirect to dashboard (affiliate creation happens via user_register hook)
-    wp_redirect(home_url('/affiliate-dashboard/'));
-    exit;
-}
-    
-    // DASHBOARD
-    public function dashboard_shortcode() {
-        if (!is_user_logged_in()) {
-            return '<p>Please <a href="' . wp_login_url(get_permalink()) . '">login</a> to access your dashboard.</p>';
+    public function process_registration() {
+        if (!isset($_POST['register_affiliate'])) {
+            return;
         }
         
-        // Check if template file exists
-        $template_file = CAS_PLUGIN_DIR . 'templates/dashboard.php';
-        
-        if (file_exists($template_file)) {
-            ob_start();
-            include $template_file;
-            return ob_get_clean();
+        if (!isset($_POST['affiliate_reg_nonce']) || !wp_verify_nonce($_POST['affiliate_reg_nonce'], 'affiliate_registration')) {
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Security check failed'), wp_get_referer()));
+            exit;
         }
         
-        // Fallback message
-        return '<p>Dashboard template not found. Please check plugin installation.</p>';
+        $username = sanitize_user($_POST['username']);
+        $email = sanitize_email($_POST['user_email']);
+        $password = $_POST['password'];
+        $full_name = sanitize_text_field($_POST['full_name']);
+        
+        if (!validate_username($username)) {
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Invalid username'), wp_get_referer()));
+            exit;
+        }
+        
+        if (username_exists($username)) {
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Username already taken'), wp_get_referer()));
+            exit;
+        }
+        
+        if (email_exists($email)) {
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Email already registered'), wp_get_referer()));
+            exit;
+        }
+        
+        if (!is_email($email)) {
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => 'Invalid email'), wp_get_referer()));
+            exit;
+        }
+        
+        $user_id = wp_create_user($username, $password, $email);
+        
+        if (is_wp_error($user_id)) {
+            $error_message = $user_id->get_error_message();
+            wp_redirect(add_query_arg(array('registration' => 'failed', 'error' => urlencode($error_message)), wp_get_referer()));
+            exit;
+        }
+        
+        wp_update_user(array(
+            'ID' => $user_id,
+            'display_name' => $full_name,
+            'first_name' => $full_name,
+            'role' => 'subscriber'
+        ));
+        
+        if (!empty($_POST['whatsapp'])) {
+            update_user_meta($user_id, 'whatsapp', sanitize_text_field($_POST['whatsapp']));
+        }
+        
+        if (!empty($_POST['instagram'])) {
+            update_user_meta($user_id, 'instagram', sanitize_text_field($_POST['instagram']));
+        }
+        
+        wp_set_current_user($user_id);
+        wp_set_auth_cookie($user_id, true);
+        do_action('wp_login', $username, get_userdata($user_id));
+        
+        wp_redirect(wc_get_page_permalink('myaccount'));
+        exit;
     }
     
-    // ADMIN MENU
+    // === ADMIN MENU ===
+    
     public function admin_menu() {
         add_menu_page(
             'Affiliates',
@@ -653,8 +828,6 @@ public function process_registration() {
         $file = CAS_PLUGIN_DIR . 'admin/overview.php';
         if (file_exists($file)) {
             include $file;
-        } else {
-            echo '<div class="wrap"><h1>Admin page not found</h1><p>File: ' . $file . '</p></div>';
         }
     }
     
@@ -662,8 +835,6 @@ public function process_registration() {
         $file = CAS_PLUGIN_DIR . 'admin/payouts.php';
         if (file_exists($file)) {
             include $file;
-        } else {
-            echo '<div class="wrap"><h1>Payouts page not found</h1></div>';
         }
     }
     
@@ -671,12 +842,11 @@ public function process_registration() {
         $file = CAS_PLUGIN_DIR . 'admin/reports.php';
         if (file_exists($file)) {
             include $file;
-        } else {
-            echo '<div class="wrap"><h1>Reports page not found</h1></div>';
         }
     }
     
-    // AJAX HANDLERS
+    // === AJAX HANDLERS ===
+    
     public function toggle_status_ajax() {
         global $wpdb;
         
@@ -734,5 +904,4 @@ public function process_registration() {
 }
 
 // Initialize plugin
-
 Custom_Affiliate_System::get_instance();

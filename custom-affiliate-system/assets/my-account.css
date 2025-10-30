@@ -1,0 +1,54 @@
+/* Custom My Account Styles for Affiliate System */
+
+/* Sidebar Navigation */
+.woocommerce-MyAccount-navigation {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.woocommerce-MyAccount-navigation ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.woocommerce-MyAccount-navigation li {
+    margin: 5px 0;
+}
+
+.woocommerce-MyAccount-navigation a {
+    display: block;
+    padding: 12px 20px;
+    color: #333;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.woocommerce-MyAccount-navigation a:hover,
+.woocommerce-MyAccount-navigation .is-active a {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Content Area */
+.woocommerce-MyAccount-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .woocommerce-MyAccount-navigation {
+        margin-bottom: 20px;
+    }
+    
+    .woocommerce-MyAccount-content {
+        padding: 20px;
+    }
+}
