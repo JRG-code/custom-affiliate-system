@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and dashboard
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -25,10 +25,10 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 
 // Para repo privado
-$myUpdateChecker->setAuthentication(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);
+$myUpdateChecker->setAuthentication('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');
 
 // Define constants
-define('CAS_VERSION', '1.0.1');
+define('CAS_VERSION', '1.0.5');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -734,4 +734,5 @@ public function process_registration() {
 }
 
 // Initialize plugin
+
 Custom_Affiliate_System::get_instance();
