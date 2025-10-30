@@ -17,7 +17,7 @@ function copyCode() {
     navigator.clipboard.writeText(code).then(() => {
         const btn = event.target;
         const originalText = btn.innerHTML;
-        btn.innerHTML = '✓ Copiado!';
+        btn.innerHTML = '✓ Copied!';
         btn.style.background = 'rgba(76, 175, 80, 0.5)';
         btn.style.borderColor = 'rgba(76, 175, 80, 0.7)';
         
@@ -27,17 +27,17 @@ function copyCode() {
             btn.style.borderColor = '';
         }, 2000);
     }).catch(err => {
-        alert('Código: ' + code + '\n\nCopia manualmente este código.');
+        alert('Code: ' + code + '\n\nCopy this code manually.');
     });
 }
 
 // Copy share text for Instagram
 function copyShareText(code) {
-    const text = `Usa o meu código ${code} e ganha 5€ de desconto!\n\nCompra agora em: ${window.location.origin}`;
+    const text = `Use my code ${code} and get 5€ off!\n\nShop now at: ${window.location.origin}`;
     navigator.clipboard.writeText(text).then(() => {
-        alert('✓ Texto copiado! Agora cola na tua publicação ou story do Instagram.');
+        alert('✓ Text copied! Now paste it in your Instagram post or story.');
     }).catch(err => {
-        alert('Texto para partilhar:\n\n' + text);
+        alert('Text to share:\n\n' + text);
     });
 }
 

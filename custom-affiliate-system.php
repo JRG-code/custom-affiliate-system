@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.6.2
+ * Version: 1.0.7
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -25,12 +25,12 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
             __FILE__,
             'custom-affiliate-system'
         );
-        $myUpdateChecker->setAuthentication('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'); // Replace with token
+        $myUpdateChecker->setAuthentication('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'); // Replace with your token
     }
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.6.2');
+define('CAS_VERSION', '1.0.7');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -179,15 +179,15 @@ class Custom_Affiliate_System {
     public function custom_my_account_menu($items) {
         // Remove default items
         unset($items['downloads']);
+        unset($items['dashboard']); // Remove empty dashboard
         
         // Reorder and customize
         $new_items = array();
-        $new_items['dashboard'] = __('Dashboard', 'woocommerce');
-        $new_items['orders'] = __('Encomendas', 'woocommerce');
-        $new_items['affiliate-dashboard'] = __('Dashboard Influencer', 'custom-affiliate');
-        $new_items['edit-address'] = __('Endereços', 'woocommerce');
-        $new_items['edit-account'] = __('Detalhes da Conta', 'woocommerce');
-        $new_items['customer-logout'] = __('Sair', 'woocommerce');
+        $new_items['affiliate-dashboard'] = __('Influencer Dashboard', 'custom-affiliate');
+        $new_items['orders'] = __('Orders', 'woocommerce');
+        $new_items['edit-address'] = __('Addresses', 'woocommerce');
+        $new_items['edit-account'] = __('Account Details', 'woocommerce');
+        $new_items['customer-logout'] = __('Logout', 'woocommerce');
         
         return $new_items;
     }
