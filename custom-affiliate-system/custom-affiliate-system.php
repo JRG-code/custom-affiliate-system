@@ -15,6 +15,18 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require 'plugin-update-checker/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$myUpdateChecker = PucFactory::buildUpdateChecker(
+    'https://github.com/JRG-code/custom-affiliate-system/',
+    __FILE__,
+    'custom-affiliate-system'
+);
+
+// Para repo privado
+$myUpdateChecker->setAuthentication(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);
+
 // Define constants
 define('CAS_VERSION', '1.0.1');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
