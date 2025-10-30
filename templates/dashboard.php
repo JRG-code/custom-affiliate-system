@@ -778,59 +778,78 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
     
     <!-- Payout Section -->
     <div class="payout-section">
-        <h2>💳 Levantamento de Comissões</h2>
+        <h2>Commission Withdrawal</h2>
         
         <div class="balance-display">
             <div>
-                <p class="balance-label">Saldo Disponível</p>
+                <p class="balance-label">Available Balance</p>
                 <p class="balance-amount"><?php echo number_format($affiliate->unpaid_commission, 2); ?>€</p>
             </div>
             <div class="balance-info">
-                <p class="info-item">Mínimo: <?php echo $min_payout; ?>€</p>
-                <p class="info-item">Prazo: <?php echo $payment_days; ?></p>
+                <p class="info-item">Minimum: <?php echo $min_payout; ?>€</p>
+                <p class="info-item">Timeline: <?php echo $payment_days; ?></p>
             </div>
         </div>
         
         <?php if ($pending_payout): ?>
             <div class="alert alert-info">
-                <strong>Pedido Pendente</strong><br>
-                Pediste um levantamento de <strong><?php echo number_format($pending_payout->amount, 2); ?>€</strong> 
-                em <?php echo date('d/m/Y', strtotime($pending_payout->request_date)); ?>.<br>
-                <small>Receberás em até <?php echo $payment_days; ?>.</small>
+                <strong>Pending Request</strong><br>
+                You requested a withdrawal of <strong><?php echo number_format($pending_payout->amount, 2); ?>€</strong> 
+                on <?php echo date('d/m/Y', strtotime($pending_payout->request_date)); ?>.<br>
+                <small>You will receive it within <?php echo $payment_days; ?>.</small>
             </div>
         <?php elseif ($can_request): ?>
             <div class="payout-available">
                 <button class="btn-primary" onclick="openPayoutModal()">
-                    Pedir Transferência
+                    Request Transfer
                 </button>
             </div>
         <?php else: ?>
             <div class="alert alert-warning">
-                <strong>Mínimo não atingido</strong><br>
-                Precisas de <?php echo $min_payout; ?>€ para pedir um levantamento.<br>
-                Faltam <strong><?php echo number_format($min_payout - $affiliate->unpaid_commission, 2); ?>€</strong>.
+                <strong>Minimum Not Reached</strong><br>
+                You need <?php echo $min_payout; ?>€ to request a withdrawal.<br>
+                Missing <strong><?php echo number_format($min_payout - $affiliate->unpaid_commission, 2); ?>€</strong>.
             </div>
         <?php endif; ?>
         
         <div class="disclaimer-box">
-            <p><strong>Importante:</strong> Levantamentos mínimos de <strong>20€ para Tier I</strong>. Outros tiers não têm mínimo.</p>
-            <p>Consulta os <a href="https://thecouplesbrand.com/terms-and-conditions" target="_blank">Termos e Condições</a> para mais informações sobre o programa de afiliados.</p>
+            <p><strong>Important:</strong> Minimum withdrawal of <strong>20€ for Tier I</strong>. Other tiers have no minimum.</p>
+            <?php 
+            $terms_page = get_option('wp_page_for_privacy_policy'); // Try privacy policy first
+            if (!$terms_page) {
+                // Fallback: search for terms page
+                $terms_page = get_page_by_path('terms-of-service');
+                if (!$terms_page) {
+                    $terms_page = get_page_by_path('terms-and-conditions');
+                }
+                if ($terms_page) {
+                    $terms_page = $terms_page->ID;
+                }
+            }
+            
+            if ($terms_page): 
+                $terms_url = get_permalink($terms_page);
+            else:
+                $terms_url = home_url('/terms-of-service/');
+            endif;
+            ?>
+            <p>Check our <a href="<?php echo esc_url($terms_url); ?>" target="_blank">Terms and Conditions</a> for more information about the affiliate program.</p>
         </div>
     </div>
     
     <!-- Recent Sales -->
     <?php if (!empty($recent_referrals)): ?>
     <div class="recent-sales-section">
-        <h2>Vendas Recentes</h2>
+        <h2>Recent Sales</h2>
         <div class="sales-table">
             <table>
                 <thead>
                     <tr>
-                        <th>Data</th>
-                        <th>Encomenda</th>
+                        <th>Date</th>
+                        <th>Order</th>
                         <th>Total</th>
-                        <th>Comissão</th>
-                        <th>Estado</th>
+                        <th>Commission</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -842,7 +861,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
                         <td class="commission-amount">+<?php echo number_format($ref->commission_amount, 2); ?>€</td>
                         <td>
                             <span class="status-badge status-<?php echo $ref->status; ?>">
-                                <?php echo $ref->status == 'paid' ? 'Pago' : 'Pendente'; ?>
+                                <?php echo $ref->status == 'paid' ? 'Paid' : 'Pending'; ?>
                             </span>
                         </td>
                     </tr>
@@ -855,66 +874,66 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
     
     <!-- Tier Info & Conditions -->
     <div class="conditions-section">
-        <h2>Condições do Programa</h2>
+        <h2>Program Conditions</h2>
         
         <div class="tier-benefits">
             <div class="benefit-item">
                 <span class="benefit-icon">✓</span>
                 <div>
-                    <strong>Comissão:</strong> <?php echo $commission_rate; ?>% em todas as vendas geradas pelo teu código
+                    <strong>Commission:</strong> <?php echo $commission_rate; ?>% on all sales generated by your code
                 </div>
             </div>
             
             <div class="benefit-item">
                 <span class="benefit-icon">✓</span>
                 <div>
-                    <strong>Levantamento mínimo:</strong> 
-                    <?php echo ($affiliate->tier === 'tier_1') ? '20€ para Tier I' : 'Sem mínimo para o teu tier'; ?>
+                    <strong>Minimum withdrawal:</strong> 
+                    <?php echo ($affiliate->tier === 'tier_1') ? '20€ for Tier I' : 'No minimum for your tier'; ?>
                 </div>
             </div>
             
             <div class="benefit-item">
                 <span class="benefit-icon">✓</span>
                 <div>
-                    <strong>Prazo de pagamento:</strong> 
-                    Receberás o teu dinheiro em até <?php echo $payment_days; ?> após pedido
+                    <strong>Payment timeline:</strong> 
+                    You will receive your money within <?php echo $payment_days; ?> after request
                 </div>
             </div>
             
             <div class="benefit-item">
                 <span class="benefit-icon">✓</span>
                 <div>
-                    <strong>Desconto do código:</strong> 5€ de desconto por utilização (cada cliente pode usar 1 vez)
+                    <strong>Code discount:</strong> 5€ discount per use (each customer can use once)
                 </div>
             </div>
             
             <div class="benefit-item">
                 <span class="benefit-icon">✓</span>
                 <div>
-                    <strong>Validade:</strong> O teu código é válido indefinidamente e não expira
+                    <strong>Validity:</strong> Your code is valid indefinitely and does not expire
                 </div>
             </div>
         </div>
         
         <div class="tier-upgrade">
             <?php if ($affiliate->tier === 'tier_1'): ?>
-                <p><strong>Queres subir de Tier?</strong></p>
-                <p>Descobre os benefícios de Tier II (15% comissão) ou Embaixador (20% comissão) com vantagens exclusivas!</p>
-                <a href="https://thecouplesbrand.com/influencers-program/#tiers" class="btn-secondary">Saber Mais sobre Tiers</a>
+                <p><strong>Want to upgrade your Tier?</strong></p>
+                <p>Discover the benefits of Tier II (15% commission) or Ambassador (20% commission) with exclusive advantages!</p>
+                <a href="https://thecouplesbrand.com/influencers-program/#tiers" class="btn-secondary">Learn More About Tiers</a>
             <?php else: ?>
-                <p><strong>Parabéns!</strong> És um membro <?php echo $tier_name; ?> com benefícios premium.</p>
+                <p><strong>Congratulations!</strong> You are a <?php echo $tier_name; ?> member with premium benefits.</p>
             <?php endif; ?>
         </div>
         
         <div class="disclaimer-box" style="margin-top: 20px;">
-            <p><strong>Termos e Condições:</strong></p>
-            <p>Para informações completas sobre o programa de afiliados, consulta os nossos <a href="https://thecouplesbrand.com/terms-and-conditions" target="_blank">Termos e Condições</a>.</p>
+            <p><strong>Terms and Conditions:</strong></p>
+            <p>For complete information about the affiliate program, check our <a href="https://thecouplesbrand.com/terms-and-conditions" target="_blank">Terms and Conditions</a>.</p>
         </div>
         
         <!-- Support Contact -->
         <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; text-align: center;">
-            <h3 style="margin: 0 0 10px 0;">Precisas de Ajuda?</h3>
-            <p style="margin: 0; opacity: 0.9;">Tens questões sobre a tua conta ou precisas de suporte?</p>
+            <h3 style="margin: 0 0 10px 0;">Need Help?</h3>
+            <p style="margin: 0; opacity: 0.9;">Have questions about your account or need support?</p>
             <p style="margin: 15px 0 0 0;">
                 <a href="mailto:support@thecouplesbrand.com" style="color: white; text-decoration: underline; font-weight: 600;">support@thecouplesbrand.com</a>
             </p>
@@ -927,36 +946,36 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 <div id="payoutModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closePayoutModal()">&times;</span>
-        <h2>Pedir Transferência</h2>
+        <h2>Request Transfer</h2>
         
         <form id="payoutForm">
             <div class="form-group">
-                <label>Valor a Transferir</label>
+                <label>Amount to Transfer</label>
                 <input type="text" value="<?php echo number_format($affiliate->unpaid_commission, 2); ?>€" readonly>
             </div>
             
             <div class="form-group">
-                <label>Método de Pagamento *</label>
+                <label>Payment Method *</label>
                 <select name="payment_method" required>
-                    <option value="">Seleciona...</option>
-                    <option value="bank_transfer">Transferência Bancária (NIB)</option>
+                    <option value="">Select...</option>
+                    <option value="bank_transfer">Bank Transfer (NIB)</option>
                     <option value="mbway">MB Way</option>
                     <option value="paypal">PayPal</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label>Dados para Transferência *</label>
-                <textarea name="payment_details" rows="4" placeholder="Ex: NIB (21 dígitos), número de telefone MB Way, ou email PayPal" required></textarea>
-                <small>Certifica-te que os dados estão corretos!</small>
+                <label>Payment Details *</label>
+                <textarea name="payment_details" rows="4" placeholder="Ex: NIB (21 digits), MB Way phone number, or PayPal email" required></textarea>
+                <small>Make sure the details are correct!</small>
             </div>
             
             <div class="form-group">
-                <label>Notas Adicionais (opcional)</label>
-                <textarea name="notes" rows="2" placeholder="Alguma informação extra que queiras partilhar..."></textarea>
+                <label>Additional Notes (optional)</label>
+                <textarea name="notes" rows="2" placeholder="Any extra information you want to share..."></textarea>
             </div>
             
-            <button type="submit" class="btn-primary" style="width: 100%;">Confirmar Pedido</button>
+            <button type="submit" class="btn-primary" style="width: 100%;">Confirm Request</button>
             <div id="payoutMessage" style="margin-top: 15px;"></div>
         </form>
     </div>
