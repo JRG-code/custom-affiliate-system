@@ -1,0 +1,403 @@
+/* 
+ * Custom Admin Styles for Affiliate System
+ * Estilos para todas as páginas de administração do plugin
+ */
+
+/* === ESTILOS GERAIS DAS PÁGINAS === */
+
+.cas-settings-page,
+.cas-email-page {
+    max-width: 1200px;
+}
+
+.cas-settings-page h1,
+.cas-email-page h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* === CABEÇALHOS COM GRADIENTE === */
+
+.cas-settings-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.cas-settings-header h2 {
+    margin: 0 0 10px 0;
+    color: white;
+    border: none;
+    padding: 0;
+}
+
+.cas-settings-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* === CAIXAS DE AVISO === */
+
+.cas-settings-notice {
+    background: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+}
+
+.cas-settings-notice p {
+    margin: 0;
+    color: #0c4a6e;
+}
+
+/* === TABELAS DE FORMULÁRIO === */
+
+.cas-settings-page .form-table,
+.cas-email-page .form-table {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+}
+
+.cas-settings-page .form-table th,
+.cas-email-page .form-table th {
+    font-weight: 600;
+    color: #1e293b;
+    padding: 15px 10px;
+}
+
+.cas-settings-page .form-table td,
+.cas-email-page .form-table td {
+    padding: 15px 10px;
+}
+
+/* === CAMPOS DE INPUT === */
+
+.cas-settings-page .form-table td input[type="number"],
+.cas-settings-page .form-table td input[type="text"],
+.cas-settings-page .form-table td input[type="email"],
+.cas-settings-page .form-table td select,
+.cas-email-page .form-table td input[type="text"],
+.cas-email-page .form-table td select {
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.cas-settings-page .form-table td input[type="number"]:focus,
+.cas-settings-page .form-table td input[type="text"]:focus,
+.cas-settings-page .form-table td input[type="email"]:focus,
+.cas-settings-page .form-table td select:focus,
+.cas-email-page .form-table td input[type="text"]:focus,
+.cas-email-page .form-table td select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* === DESCRIÇÕES DOS CAMPOS === */
+
+.cas-settings-page .description,
+.cas-email-page .description {
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* === TÍTULOS DE SECÇÃO === */
+
+.cas-settings-page h2 {
+    padding: 15px 0;
+    border-bottom: 2px solid #e5e7eb;
+    margin: 30px 0 20px 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* === BOTÕES === */
+
+.cas-settings-page .submit,
+.cas-email-page .submit {
+    padding: 20px 0 0 0;
+    border-top: 2px solid #e5e7eb;
+    margin-top: 30px;
+}
+
+.cas-settings-page .button-primary.button-large,
+.cas-email-page .button-primary.button-large {
+    padding: 12px 32px;
+    font-size: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s;
+    height: auto;
+}
+
+.cas-settings-page .button-primary.button-large:hover,
+.cas-email-page .button-primary.button-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.cas-settings-page .button-primary.button-large:active,
+.cas-email-page .button-primary.button-large:active {
+    transform: translateY(0);
+}
+
+/* === RODAPÉ DAS PÁGINAS === */
+
+.cas-settings-footer {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-top: 30px;
+}
+
+.cas-settings-footer h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cas-settings-footer h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.cas-settings-footer p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+/* === AVISOS ADMIN === */
+
+.notice.cas-setup-notice {
+    border-left: 4px solid #f59e0b;
+    background: #fef3c7;
+}
+
+.notice.cas-setup-notice p {
+    color: #92400e;
+}
+
+.notice.cas-setup-notice ul {
+    margin-left: 20px;
+    color: #92400e;
+}
+
+.notice.cas-setup-notice .button {
+    margin-top: 10px;
+}
+
+/* === MENSAGENS DE SUCESSO === */
+
+.updated.settings-error {
+    border-left: 4px solid #10b981;
+    background: #d1fae5;
+}
+
+.updated.settings-error p {
+    color: #065f46;
+}
+
+/* === MENSAGENS DE ERRO === */
+
+.error.settings-error {
+    border-left: 4px solid #ef4444;
+    background: #fee2e2;
+}
+
+.error.settings-error p {
+    color: #991b1b;
+}
+
+/* === GRID DO RODAPÉ === */
+
+.cas-settings-footer > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* === CHECKBOXES === */
+
+.cas-settings-page input[type="checkbox"],
+.cas-email-page input[type="checkbox"] {
+    margin-right: 8px;
+    width: 18px;
+    height: 18px;
+}
+
+.cas-settings-page label,
+.cas-email-page label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* === CAIXAS DE INFORMAÇÃO === */
+
+.cas-info-box {
+    background: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin: 15px 0;
+}
+
+.cas-info-box p {
+    margin: 5px 0;
+    color: #0c4a6e;
+}
+
+.cas-warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin: 15px 0;
+}
+
+.cas-warning-box p {
+    margin: 5px 0;
+    color: #92400e;
+}
+
+/* === GRUPOS DE CAMPOS === */
+
+.cas-field-group {
+    padding: 15px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+/* === ÍCONE DO MENU === */
+
+#adminmenu .toplevel_page_affiliate-system .dashicons-groups:before {
+    color: #667eea;
+}
+
+#adminmenu .toplevel_page_affiliate-system:hover .dashicons-groups:before,
+#adminmenu .toplevel_page_affiliate-system.current .dashicons-groups:before {
+    color: #764ba2;
+}
+
+/* === ESTADO DE LOADING === */
+
+.cas-settings-page .submit button:disabled,
+.cas-email-page .submit button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* === EDITOR WYSIWYG === */
+
+.cas-email-page .wp-editor-container {
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.cas-email-page .wp-editor-container:focus-within {
+    border-color: #667eea;
+}
+
+/* === RESPONSIVO === */
+
+@media (max-width: 768px) {
+    .cas-settings-header {
+        padding: 20px;
+    }
+    
+    .cas-settings-page .form-table,
+    .cas-email-page .form-table {
+        padding: 15px;
+    }
+    
+    .cas-settings-page .form-table th,
+    .cas-settings-page .form-table td,
+    .cas-email-page .form-table th,
+    .cas-email-page .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+    
+    .cas-settings-page .form-table td input[type="number"],
+    .cas-settings-page .form-table td input[type="text"],
+    .cas-settings-page .form-table td input[type="email"],
+    .cas-settings-page .form-table td select,
+    .cas-email-page .form-table td input[type="text"],
+    .cas-email-page .form-table td select {
+        width: 100%;
+    }
+    
+    .cas-settings-footer > div {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === ANIMAÇÕES === */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.notice {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* === MELHORIAS DE ACESSIBILIDADE === */
+
+.cas-settings-page input:focus-visible,
+.cas-settings-page select:focus-visible,
+.cas-settings-page button:focus-visible,
+.cas-email-page input:focus-visible,
+.cas-email-page select:focus-visible,
+.cas-email-page button:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* === TOOLTIPS (para futuras implementações) === */
+
+.cas-tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.cas-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background: #1e293b;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+    border-radius: 4px;
+    z-index: 1000;
+}

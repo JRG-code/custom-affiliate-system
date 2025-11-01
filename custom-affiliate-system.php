@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.7.1
+ * Version: 1.0.8
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -25,14 +25,17 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
             __FILE__,
             'custom-affiliate-system'
         );
-        $myUpdateChecker->setAuthentication('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'); // Replace with your token
+        $myUpdateChecker->setAuthentication('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'); // Replace with token
     }
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.7.1');
+define('CAS_VERSION', '1.0.8');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// Include helper functions
+require_once CAS_PLUGIN_DIR . 'includes/helpers.php';
 
 class Custom_Affiliate_System {
     
@@ -57,6 +60,8 @@ class Custom_Affiliate_System {
     public function activate() {
         $this->create_tables();
         $this->create_pages();
+
+        cas_init_default_settings();
         flush_rewrite_rules();
     }
     
@@ -70,8 +75,8 @@ class Custom_Affiliate_System {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
-        // Affiliates table - FORCE CREATE
-        $sql1 = "CREATE TABLE {$wpdb->prefix}affiliates (
+        // Affiliates table 
+        $sql1 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliates (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             affiliate_code varchar(50) NOT NULL UNIQUE,
@@ -89,7 +94,7 @@ class Custom_Affiliate_System {
             KEY status (status)
         ) $charset_collate;";
         
-        // Referrals table - keep IF NOT EXISTS
+        // Referrals table
         $sql2 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliate_referrals (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             affiliate_id bigint(20) NOT NULL,
@@ -106,7 +111,7 @@ class Custom_Affiliate_System {
             KEY status (status)
         ) $charset_collate;";
         
-        // Payouts table - keep IF NOT EXISTS
+        // Payouts table
         $sql3 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliate_payouts (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             affiliate_id bigint(20) NOT NULL,
@@ -151,6 +156,7 @@ class Custom_Affiliate_System {
         add_action('woocommerce_order_status_processing', array($this, 'track_commission'), 10, 1);
         add_action('init', array($this, 'process_registration'));
         add_action('admin_menu', array($this, 'admin_menu'));
+        add_action('admin_notices', array($this, 'admin_notices'));
         add_action('wp_ajax_request_affiliate_payout', array($this, 'handle_payout_request'));
         add_action('wp_ajax_toggle_affiliate_status', array($this, 'toggle_status_ajax'));
         add_action('wp_ajax_export_affiliate_data', array($this, 'export_data'));
@@ -167,6 +173,7 @@ class Custom_Affiliate_System {
         
         // Enqueue assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
     
     // === MY ACCOUNT CUSTOMIZATION ===
@@ -354,21 +361,26 @@ class Custom_Affiliate_System {
             $counter++;
         }
         
-        // Insert affiliate
-        $wpdb->insert(
-            $wpdb->prefix . 'affiliates',
-            array(
-                'user_id' => $user_id,
-                'affiliate_code' => $affiliate_code,
-                'commission_rate' => 10.00,
-                'tier' => 'tier_1',
-                'status' => 'active'
-            ),
+        // Get commission rate from settings
+$commission_rate = cas_get_tier_setting('tier_1', 'commission');
+$status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
+
+// Insert affiliate
+$wpdb->insert(
+    $wpdb->prefix . 'affiliates',
+    array(
+        'user_id' => $user_id,
+        'affiliate_code' => $affiliate_code,
+        'commission_rate' => $commission_rate,
+        'tier' => 'tier_1',
+        'status' => $status
+    ),
             array('%d', '%s', '%f', '%s', '%s')
         );
         
-        // Create WooCommerce coupon
-        $this->create_coupon($affiliate_code, $user_id, 10);
+        // Get discount from settings
+        $coupon_discount = cas_get_tier_setting('tier_1', 'coupon_discount');
+        $this->create_coupon($affiliate_code, $user_id, $coupon_discount);
         
         // Send welcome email
         $this->send_welcome_email($user, $affiliate_code);
@@ -822,6 +834,27 @@ class Custom_Affiliate_System {
             'affiliate-reports',
             array($this, 'admin_reports_page')
         );
+
+        //settings page
+        add_submenu_page(
+            'affiliate-system',
+            'Settings',
+            'Settings',
+            'manage_options',
+            'affiliate-settings',
+            array($this, 'admin_settings_page')
+        );
+
+        //e-mail page
+        add_submenu_page(
+            'affiliate-system',
+            'Email Affiliates',
+            'Email Affiliates',
+            'manage_options',
+            'affiliate-email',
+            array($this, 'admin_email_page')
+        );
+
     }
     
     public function admin_overview_page() {
@@ -901,6 +934,113 @@ class Custom_Affiliate_System {
         fclose($output);
         exit;
     }
+    
+    // Admin notices for setup status
+    public function admin_notices() {
+        $screen = get_current_screen();
+        
+        // Only show on affiliate pages
+        if (!$screen || strpos($screen->id, 'affiliate') === false) {
+            return;
+        }
+        
+        // Don't show on settings page itself
+        if ($screen->id === 'affiliates_page_affiliate-settings') {
+            return;
+        }
+        
+        // Check if settings are configured
+        $status = cas_check_settings_status();
+        
+        if (!$status['configured']) {
+            ?>
+            <div class="notice notice-warning is-dismissible cas-setup-notice">
+                <p><strong>⚠️ Affiliate System Configuration Required</strong></p>
+                <p>Some settings have not yet been defined. Please complete the configuration to ensure that the affiliate programme functions correctly.</p>
+                <?php if (!empty($status['missing'])): ?>
+                <ul>
+                    <?php foreach ($status['missing'] as $item): ?>
+                        <li><?php echo esc_html($item); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+                <p>
+                    <a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>" class="button button-primary">
+                        Configure now
+                    </a>
+                </p>
+            </div>
+            <?php
+        }
+    }
+    
+    // Enqueue admin assets
+    public function enqueue_admin_assets($hook) {
+        // Only load on affiliate pages
+        if (strpos($hook, 'affiliate') === false) {
+            return;
+        }
+        
+        wp_enqueue_style(
+            'cas-admin',
+            CAS_PLUGIN_URL . 'assets/admin.css',
+            array(),
+            CAS_VERSION
+        );
+    }
+    
+    public function enqueue_frontend_assets() {
+        if (is_account_page()) {
+            wp_enqueue_style('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.css', array(), CAS_VERSION);
+            wp_enqueue_script('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.js', array('jquery'), CAS_VERSION, true);
+            
+            wp_localize_script('cas-my-account', 'casMyAccount', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('payout_request')
+            ));
+        }
+    }
+    
+    // ===== ADMIN PAGES =====
+    
+    public function admin_overview_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/overview.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+    
+    public function admin_payouts_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/payouts.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+    
+    public function admin_reports_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/reports.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+    
+    // Settings page
+    public function admin_settings_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/settings.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+    
+    // Email page
+    public function admin_email_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
+
 }
 
 // Initialize plugin

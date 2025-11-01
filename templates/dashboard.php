@@ -27,11 +27,20 @@ $recent_referrals = $wpdb->get_results($wpdb->prepare(
     $affiliate->id
 ));
 
-$tier_names = array(
-    'tier_1' => 'Tier I',
-    'tier_2' => 'Tier II',
-    'ambassador' => 'Embaixador'
-);
+// Use helper functions
+$tier_name = cas_get_tier_name($affiliate->tier);
+$tier_badge = cas_get_tier_badge($affiliate->tier);
+$commission_rate = $affiliate->commission_rate;
+
+// Get settings dynamically
+$min_payout = cas_get_tier_setting($affiliate->tier, 'min_payout');
+$payment_days = cas_get_payment_timeline_text($affiliate->tier);
+$payout_check = cas_can_request_payout($affiliate);
+$can_request = $payout_check['can_request'];
+
+// Get currency and support email
+$currency = cas_get_general_setting('currency_symbol');
+$support_email = cas_get_support_email();
 
 $tier_badges = array(
     'tier_1' => '⭐',
@@ -767,7 +776,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
             <div class="stat-icon">💵</div>
             <div class="stat-content">
                 <h3>A Receber</h3>
-                <div class="stat-number"><?php echo number_format($affiliate->unpaid_commission, 2); ?>€</div>
+                <div class="stat-number"><?php echo cas_format_currency($affiliate->unpaid_commission); ?></div>
                 <p class="stat-label">comissão <?php echo $commission_rate; ?>%</p>
             </div>
         </div>
@@ -783,7 +792,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         <div class="balance-display">
             <div>
                 <p class="balance-label">Available Balance</p>
-                <p class="balance-amount"><?php echo number_format($affiliate->unpaid_commission, 2); ?>€</p>
+                <p class="balance-amount"><?php echo cas_format_currency($affiliate->unpaid_commission); ?></p>
             </div>
             <div class="balance-info">
                 <p class="info-item">Minimum: <?php echo $min_payout; ?>€</p>
@@ -951,7 +960,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         <form id="payoutForm">
             <div class="form-group">
                 <label>Amount to Transfer</label>
-                <input type="text" value="<?php echo number_format($affiliate->unpaid_commission, 2); ?>€" readonly>
+                <input type="text" value="<?php echo cas_format_currency($affiliate->unpaid_commission); ?>" readonly>
             </div>
             
             <div class="form-group">
