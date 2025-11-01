@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.8
+ * Version: 1.0.8.1
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -30,7 +30,7 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.8');
+define('CAS_VERSION', '1.0.8.1');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -877,7 +877,22 @@ $wpdb->insert(
             include $file;
         }
     }
+        // Settings page
+    public function admin_settings_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/settings.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
     
+        // Email page
+    public function admin_email_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
     // === AJAX HANDLERS ===
     
     public function toggle_status_ajax() {
@@ -988,58 +1003,6 @@ $wpdb->insert(
             CAS_VERSION
         );
     }
-    
-    public function enqueue_frontend_assets() {
-        if (is_account_page()) {
-            wp_enqueue_style('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.css', array(), CAS_VERSION);
-            wp_enqueue_script('cas-my-account', CAS_PLUGIN_URL . 'assets/my-account.js', array('jquery'), CAS_VERSION, true);
-            
-            wp_localize_script('cas-my-account', 'casMyAccount', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('payout_request')
-            ));
-        }
-    }
-    
-    // ===== ADMIN PAGES =====
-    
-    public function admin_overview_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/overview.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
-    
-    public function admin_payouts_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/payouts.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
-    
-    public function admin_reports_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/reports.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
-    
-    // Settings page
-    public function admin_settings_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/settings.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
-    
-    // Email page
-    public function admin_email_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
-
 
 }
 
