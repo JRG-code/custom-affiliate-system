@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.8.2
+ * Version: 1.0.8.3
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -30,7 +30,7 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.8.2');
+define('CAS_VERSION', '1.0.8.3');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -904,6 +904,12 @@ $wpdb->insert(
         }
     }
 
+    //debug pade
+    public function admin_debug_page() {
+        include CAS_PLUGIN_DIR . 'admin/debug.php';
+    }
+
+
     // === AJAX HANDLERS ===
     
     public function toggle_status_ajax() {
@@ -988,18 +994,6 @@ $wpdb->insert(
 public function enqueue_admin_assets($hook) {
     if (strpos($hook, 'affiliate') === false) return;
     wp_enqueue_style('cas-admin', CAS_PLUGIN_URL . 'assets/admin.css', array(), CAS_VERSION);
-}
-
-public function admin_settings_page() {
-    include CAS_PLUGIN_DIR . 'admin/settings.php';
-}
-
-public function admin_email_page() {
-    include CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
-}
-
-public function admin_debug_page() {
-    include CAS_PLUGIN_DIR . 'admin/debug.php';
 }
 
 }
