@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.8.1
+ * Version: 1.0.8.2
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -30,7 +30,7 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.8.1');
+define('CAS_VERSION', '1.0.8.2');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
