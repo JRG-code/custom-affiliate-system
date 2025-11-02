@@ -5,45 +5,6 @@
 
 if (!defined('ABSPATH')) exit;
 
-function cas_register_settings() {
-    register_setting('cas_settings_group', 'cas_settings', 'cas_sanitize_settings');
-    
-    // Tier sections
-    add_settings_section('cas_tier1_section', '⭐ Tier I - Basic Affiliate Settings', 'cas_tier1_section_callback', 'cas-settings');
-    add_settings_section('cas_tier2_section', '💎 Tier II - Influencer Settings', 'cas_tier2_section_callback', 'cas-settings');
-    add_settings_section('cas_ambassador_section', '👑 Ambassador Settings', 'cas_ambassador_section_callback', 'cas-settings');
-    add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
-    add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
-    
-    // Tier 1 fields
-    add_settings_field('tier1_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    
-    // Tier 2 fields
-    add_settings_field('tier2_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    
-    // Ambassador fields
-    add_settings_field('ambassador_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    
-    // General fields
-    add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
-    
-    // Debug field
-    add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
-}
-add_action('admin_init', 'cas_register_settings');
-
 // Section callbacks
 function cas_tier1_section_callback() {
     echo '<p>Settings for basic tier affiliates (default for new registrations).</p>';
@@ -220,6 +181,40 @@ function cas_update_existing_coupons($new_settings) {
         }
     }
 }
+
+// Register settings
+function cas_register_settings() {
+    register_setting('cas_settings_group', 'cas_settings', 'cas_sanitize_settings');
+    
+    add_settings_section('cas_tier1_section', '⭐ Tier I - Basic Affiliate Settings', 'cas_tier1_section_callback', 'cas-settings');
+    add_settings_section('cas_tier2_section', '💎 Tier II - Influencer Settings', 'cas_tier2_section_callback', 'cas-settings');
+    add_settings_section('cas_ambassador_section', '👑 Ambassador Settings', 'cas_ambassador_section_callback', 'cas-settings');
+    add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
+    add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
+    
+    add_settings_field('tier1_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    
+    add_settings_field('tier2_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    
+    add_settings_field('ambassador_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    
+    add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
+    
+    add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
+}
+add_action('admin_init', 'cas_register_settings');
 
 // Save debug setting separately
 if (isset($_POST['cas_debug_enabled'])) {
