@@ -1,112 +1,74 @@
 <?php
 /**
  * Admin Settings Page
- * Manage all affiliate system configurations
- * 
- * Esta página permite configurar todas as opções do sistema de afiliados
- * sem precisar editar código. Todas as mudanças aplicam-se automaticamente.
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
-// Registar todas as configurações do plugin
 function cas_register_settings() {
-    // Registar o grupo de configurações
     register_setting('cas_settings_group', 'cas_settings', 'cas_sanitize_settings');
     
-    // === SECÇÃO TIER 1 ===
-    add_settings_section(
-        'cas_tier1_section',
-        '⭐ Tier I - Configurações Afiliados Básicos',
-        'cas_tier1_section_callback',
-        'cas-settings'
-    );
+    // Tier sections
+    add_settings_section('cas_tier1_section', '⭐ Tier I - Basic Affiliate Settings', 'cas_tier1_section_callback', 'cas-settings');
+    add_settings_section('cas_tier2_section', '💎 Tier II - Influencer Settings', 'cas_tier2_section_callback', 'cas-settings');
+    add_settings_section('cas_ambassador_section', '👑 Ambassador Settings', 'cas_ambassador_section_callback', 'cas-settings');
+    add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
+    add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
     
-    // === SECÇÃO TIER 2 ===
-    add_settings_section(
-        'cas_tier2_section',
-        '💎 Tier II - Configurações Influencers',
-        'cas_tier2_section_callback',
-        'cas-settings'
-    );
+    // Tier 1 fields
+    add_settings_field('tier1_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    add_settings_field('tier1_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
     
-    // === SECÇÃO AMBASSADOR ===
-    add_settings_section(
-        'cas_ambassador_section',
-        '👑 Configurações Embaixadores',
-        'cas_ambassador_section_callback',
-        'cas-settings'
-    );
+    // Tier 2 fields
+    add_settings_field('tier2_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
+    add_settings_field('tier2_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
     
-    // === SECÇÃO GERAL ===
-    add_settings_section(
-        'cas_general_section',
-        '⚙️ Configurações Gerais',
-        'cas_general_section_callback',
-        'cas-settings'
-    );
+    // Ambassador fields
+    add_settings_field('ambassador_commission', 'Commission Rate (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_min_payout', 'Minimum Payout (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_payment_days', 'Payment Timeline (days)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
+    add_settings_field('ambassador_coupon_discount', 'Coupon Discount (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
     
-    // CAMPOS TIER 1
-    add_settings_field('tier1_commission', 'Taxa de Comissão (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_min_payout', 'Mínimo para Levantamento (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_payment_days', 'Prazo de Pagamento (dias)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
-    add_settings_field('tier1_coupon_discount', 'Desconto do Cupão (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier1_section', ['tier' => 'tier_1']);
+    // General fields
+    add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
     
-    // CAMPOS TIER 2
-    add_settings_field('tier2_commission', 'Taxa de Comissão (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_min_payout', 'Mínimo para Levantamento (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_payment_days', 'Prazo de Pagamento (dias)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    add_settings_field('tier2_coupon_discount', 'Desconto do Cupão (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_tier2_section', ['tier' => 'tier_2']);
-    
-    // CAMPOS AMBASSADOR
-    add_settings_field('ambassador_commission', 'Taxa de Comissão (%)', 'cas_commission_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_min_payout', 'Mínimo para Levantamento (€)', 'cas_min_payout_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_payment_days', 'Prazo de Pagamento (dias)', 'cas_payment_days_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    add_settings_field('ambassador_coupon_discount', 'Desconto do Cupão (€)', 'cas_coupon_discount_field_callback', 'cas-settings', 'cas_ambassador_section', ['tier' => 'ambassador']);
-    
-    // CAMPOS GERAIS
-    add_settings_field('currency_symbol', 'Símbolo da Moeda', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('support_email', 'Email de Suporte', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('auto_approve', 'Auto-Aprovar Novos Afiliados', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('terms_page', 'Página de Termos e Condições', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
+    // Debug field
+    add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
 }
 add_action('admin_init', 'cas_register_settings');
 
-// === CALLBACKS DAS SECÇÕES (Descrições) ===
-
+// Section callbacks
 function cas_tier1_section_callback() {
-    echo '<p>Configurações para afiliados básicos (tier padrão para novos registos).</p>';
+    echo '<p>Settings for basic tier affiliates (default for new registrations).</p>';
 }
-
 function cas_tier2_section_callback() {
-    echo '<p>Configurações para influencers Tier II com taxas melhores.</p>';
+    echo '<p>Settings for Tier II influencers with better rates.</p>';
 }
-
 function cas_ambassador_section_callback() {
-    echo '<p>Configurações para embaixadores premium com as melhores taxas.</p>';
+    echo '<p>Settings for premium ambassadors with the best rates.</p>';
 }
-
 function cas_general_section_callback() {
-    echo '<p>Configurações gerais do sistema.</p>';
+    echo '<p>General system-wide settings.</p>';
+}
+function cas_debug_section_callback() {
+    echo '<p>Debug options for troubleshooting issues.</p>';
 }
 
-// === CALLBACKS DOS CAMPOS (Inputs) ===
-
+// Field callbacks
 function cas_commission_field_callback($args) {
     $tier = $args['tier'];
     $options = get_option('cas_settings');
     $value = isset($options[$tier]['commission']) ? $options[$tier]['commission'] : cas_get_tier_setting($tier, 'commission');
     ?>
-    <input type="number" 
-           name="cas_settings[<?php echo $tier; ?>][commission]" 
-           value="<?php echo esc_attr($value); ?>" 
-           step="0.01" 
-           min="0" 
-           max="100"
-           class="regular-text">
-    <p class="description">Percentagem de comissão em cada venda (ex: 10 para 10%)</p>
+    <input type="number" name="cas_settings[<?php echo $tier; ?>][commission]" value="<?php echo esc_attr($value); ?>" step="0.01" min="0" max="100" class="regular-text">
+    <p class="description">Commission percentage per sale (e.g., 10 for 10%)</p>
     <?php
 }
 
@@ -115,13 +77,8 @@ function cas_min_payout_field_callback($args) {
     $options = get_option('cas_settings');
     $value = isset($options[$tier]['min_payout']) ? $options[$tier]['min_payout'] : cas_get_tier_setting($tier, 'min_payout');
     ?>
-    <input type="number" 
-           name="cas_settings[<?php echo $tier; ?>][min_payout]" 
-           value="<?php echo esc_attr($value); ?>" 
-           step="1" 
-           min="0"
-           class="regular-text">
-    <p class="description">Valor mínimo necessário para pedir levantamento (0 = sem mínimo)</p>
+    <input type="number" name="cas_settings[<?php echo $tier; ?>][min_payout]" value="<?php echo esc_attr($value); ?>" step="1" min="0" class="regular-text">
+    <p class="description">Minimum amount required to request payout (0 = no minimum)</p>
     <?php
 }
 
@@ -130,13 +87,8 @@ function cas_payment_days_field_callback($args) {
     $options = get_option('cas_settings');
     $value = isset($options[$tier]['payment_days']) ? $options[$tier]['payment_days'] : cas_get_tier_setting($tier, 'payment_days');
     ?>
-    <input type="number" 
-           name="cas_settings[<?php echo $tier; ?>][payment_days]" 
-           value="<?php echo esc_attr($value); ?>" 
-           step="1" 
-           min="1"
-           class="regular-text">
-    <p class="description">Número de dias para processar pagamento após aprovação</p>
+    <input type="number" name="cas_settings[<?php echo $tier; ?>][payment_days]" value="<?php echo esc_attr($value); ?>" step="1" min="1" class="regular-text">
+    <p class="description">Number of days to process payment after approval</p>
     <?php
 }
 
@@ -145,13 +97,8 @@ function cas_coupon_discount_field_callback($args) {
     $options = get_option('cas_settings');
     $value = isset($options[$tier]['coupon_discount']) ? $options[$tier]['coupon_discount'] : cas_get_tier_setting($tier, 'coupon_discount');
     ?>
-    <input type="number" 
-           name="cas_settings[<?php echo $tier; ?>][coupon_discount]" 
-           value="<?php echo esc_attr($value); ?>" 
-           step="0.01" 
-           min="0"
-           class="regular-text">
-    <p class="description">Valor de desconto que o cliente recebe ao usar o cupão do afiliado</p>
+    <input type="number" name="cas_settings[<?php echo $tier; ?>][coupon_discount]" value="<?php echo esc_attr($value); ?>" step="0.01" min="0" class="regular-text">
+    <p class="description">Discount amount customer receives when using affiliate coupon</p>
     <?php
 }
 
@@ -159,12 +106,8 @@ function cas_currency_symbol_field_callback() {
     $options = get_option('cas_settings');
     $value = isset($options['general']['currency_symbol']) ? $options['general']['currency_symbol'] : '€';
     ?>
-    <input type="text" 
-           name="cas_settings[general][currency_symbol]" 
-           value="<?php echo esc_attr($value); ?>" 
-           maxlength="3"
-           class="small-text">
-    <p class="description">Símbolo da moeda a mostrar (ex: €, $, £)</p>
+    <input type="text" name="cas_settings[general][currency_symbol]" value="<?php echo esc_attr($value); ?>" maxlength="3" class="small-text">
+    <p class="description">Currency symbol to display (e.g., €, $, £)</p>
     <?php
 }
 
@@ -172,11 +115,8 @@ function cas_support_email_field_callback() {
     $options = get_option('cas_settings');
     $value = isset($options['general']['support_email']) ? $options['general']['support_email'] : get_option('admin_email');
     ?>
-    <input type="email" 
-           name="cas_settings[general][support_email]" 
-           value="<?php echo esc_attr($value); ?>" 
-           class="regular-text">
-    <p class="description">Email para suporte a afiliados e notificações de levantamentos</p>
+    <input type="email" name="cas_settings[general][support_email]" value="<?php echo esc_attr($value); ?>" class="regular-text">
+    <p class="description">Email for affiliate support and payout notifications</p>
     <?php
 }
 
@@ -185,40 +125,45 @@ function cas_auto_approve_field_callback() {
     $value = isset($options['general']['auto_approve']) ? $options['general']['auto_approve'] : 1;
     ?>
     <label>
-        <input type="checkbox" 
-               name="cas_settings[general][auto_approve]" 
-               value="1" 
-               <?php checked($value, 1); ?>>
-        Aprovar automaticamente novos registos de afiliados
+        <input type="checkbox" name="cas_settings[general][auto_approve]" value="1" <?php checked($value, 1); ?>>
+        Automatically approve new affiliate registrations
     </label>
-    <p class="description">Se desativado, novos afiliados ficam pendentes de aprovação manual</p>
+    <p class="description">If disabled, new affiliates will be pending manual approval</p>
     <?php
 }
 
 function cas_terms_page_field_callback() {
     $options = get_option('cas_settings');
     $value = isset($options['general']['terms_page']) ? $options['general']['terms_page'] : '';
-    
     $pages = get_pages();
     ?>
     <select name="cas_settings[general][terms_page]" class="regular-text">
-        <option value="">Selecionar página...</option>
+        <option value="">Select a page...</option>
         <?php foreach ($pages as $page): ?>
             <option value="<?php echo $page->ID; ?>" <?php selected($value, $page->ID); ?>>
                 <?php echo esc_html($page->post_title); ?>
             </option>
         <?php endforeach; ?>
     </select>
-    <p class="description">Página com os Termos e Condições do programa de afiliados</p>
+    <p class="description">Page containing Terms & Conditions for the affiliate program</p>
     <?php
 }
 
-// === SANITIZAÇÃO E VALIDAÇÃO ===
+function cas_debug_enabled_field_callback() {
+    $value = get_option('cas_debug_enabled', false);
+    ?>
+    <label>
+        <input type="checkbox" name="cas_debug_enabled" value="1" <?php checked($value, 1); ?>>
+        Enable debug logging
+    </label>
+    <p class="description">Track affiliate system actions for troubleshooting (creates a Debug Log menu item)</p>
+    <?php
+}
 
+// Sanitize settings
 function cas_sanitize_settings($input) {
     $sanitized = array();
     
-    // Sanitizar configurações de cada tier
     $tiers = ['tier_1', 'tier_2', 'ambassador'];
     foreach ($tiers as $tier) {
         if (isset($input[$tier])) {
@@ -229,7 +174,6 @@ function cas_sanitize_settings($input) {
         }
     }
     
-    // Sanitizar configurações gerais
     if (isset($input['general'])) {
         $sanitized['general']['currency_symbol'] = sanitize_text_field($input['general']['currency_symbol']);
         $sanitized['general']['support_email'] = sanitize_email($input['general']['support_email']);
@@ -237,21 +181,13 @@ function cas_sanitize_settings($input) {
         $sanitized['general']['terms_page'] = intval($input['general']['terms_page']);
     }
     
-    // Atualizar cupões e afiliados existentes
     cas_update_existing_coupons($sanitized);
     
-    // Mensagem de sucesso
-    add_settings_error(
-        'cas_settings',
-        'cas_settings_updated',
-        '✅ Configurações guardadas com sucesso! Cupões e taxas de afiliados foram atualizados.',
-        'success'
-    );
+    add_settings_error('cas_settings', 'cas_settings_updated', '✅ Settings saved successfully! Affiliate coupons and rates updated.', 'success');
     
     return $sanitized;
 }
 
-// Atualizar cupões existentes quando as configurações mudam
 function cas_update_existing_coupons($new_settings) {
     global $wpdb;
     
@@ -263,7 +199,6 @@ function cas_update_existing_coupons($new_settings) {
         $commission = $new_settings[$tier]['commission'];
         $discount = $new_settings[$tier]['coupon_discount'];
         
-        // Atualizar taxa de comissão dos afiliados deste tier
         $wpdb->update(
             $wpdb->prefix . 'affiliates',
             ['commission_rate' => $commission],
@@ -272,13 +207,11 @@ function cas_update_existing_coupons($new_settings) {
             ['%s']
         );
         
-        // Obter todos os afiliados deste tier
         $affiliates = $wpdb->get_results($wpdb->prepare(
             "SELECT affiliate_code FROM {$wpdb->prefix}affiliates WHERE tier = %s",
             $tier
         ));
         
-        // Atualizar cada cupão WooCommerce
         foreach ($affiliates as $aff) {
             $coupon = new WC_Coupon(strtolower($aff->affiliate_code));
             if ($coupon->get_id()) {
@@ -288,57 +221,59 @@ function cas_update_existing_coupons($new_settings) {
     }
 }
 
-// === INTERFACE DA PÁGINA ===
+// Save debug setting separately
+if (isset($_POST['cas_debug_enabled'])) {
+    update_option('cas_debug_enabled', 1);
+} elseif (isset($_POST['option_page']) && $_POST['option_page'] === 'cas_settings_group') {
+    update_option('cas_debug_enabled', 0);
+}
+
 ?>
 
 <div class="wrap cas-settings-page">
-    <h1>🎯 Configurações do Sistema de Afiliados</h1>
+    <h1>🎯 Affiliate System Settings</h1>
     
-    <!-- Cabeçalho -->
     <div class="cas-settings-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin: 20px 0;">
-        <h2 style="margin: 0 0 10px 0; color: white;">Configura o Teu Programa de Afiliados</h2>
-        <p style="margin: 0; opacity: 0.9;">Gere taxas de comissão, mínimos de levantamento e outras configurações para todos os tiers de afiliados.</p>
+        <h2 style="margin: 0 0 10px 0; color: white;">Configure Your Affiliate Program</h2>
+        <p style="margin: 0; opacity: 0.9;">Manage commission rates, payout minimums, and other settings for all affiliate tiers.</p>
     </div>
     
     <?php settings_errors('cas_settings'); ?>
     
-    <!-- Aviso Importante -->
     <div class="cas-settings-notice" style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; margin: 20px 0; border-radius: 6px;">
         <p style="margin: 0; color: #0c4a6e;">
-            <strong>ℹ️ Importante:</strong> Ao mudar estas configurações, TODOS os afiliados existentes em cada tier e os seus cupões serão atualizados automaticamente. Isto garante consistência em todo o programa.
+            <strong>ℹ️ Important:</strong> Changing these settings will automatically update ALL existing affiliates in each tier and their associated coupons.
         </p>
     </div>
     
-    <!-- Formulário de Configurações -->
     <form method="post" action="options.php">
         <?php
         settings_fields('cas_settings_group');
         do_settings_sections('cas-settings');
-        submit_button('Guardar Todas as Configurações', 'primary large');
+        submit_button('Save All Settings', 'primary large');
         ?>
     </form>
     
-    <!-- Rodapé com Referência Rápida -->
     <div class="cas-settings-footer" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 30px;">
-        <h3 style="margin: 0 0 15px 0;">📋 Referência Rápida</h3>
+        <h3 style="margin: 0 0 15px 0;">📋 Quick Reference</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
             <div>
-                <h4 style="margin: 0 0 10px 0; color: #667eea;">Tier I (Básico)</h4>
-                <p style="margin: 5px 0; font-size: 14px;">• Tier padrão para novos afiliados</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Taxas de comissão standard</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Com valor mínimo de levantamento</p>
+                <h4 style="margin: 0 0 10px 0; color: #667eea;">Tier I (Basic)</h4>
+                <p style="margin: 5px 0; font-size: 14px;">• Default tier for new affiliates</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Standard commission rates</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Minimum payout threshold</p>
             </div>
             <div>
                 <h4 style="margin: 0 0 10px 0; color: #f59e0b;">Tier II (Influencer)</h4>
-                <p style="margin: 5px 0; font-size: 14px;">• Para afiliados comprovados</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Taxas de comissão mais altas</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Processamento de pagamento mais rápido</p>
+                <p style="margin: 5px 0; font-size: 14px;">• For proven performers</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Higher commission rates</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Faster payment processing</p>
             </div>
             <div>
                 <h4 style="margin: 0 0 10px 0; color: #ec4899;">Ambassador (Premium)</h4>
-                <p style="margin: 5px 0; font-size: 14px;">• Para os melhores afiliados</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Taxas de comissão máximas</p>
-                <p style="margin: 5px 0; font-size: 14px;">• Processamento de pagamento prioritário</p>
+                <p style="margin: 5px 0; font-size: 14px;">• For top affiliates</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Maximum commission rates</p>
+                <p style="margin: 5px 0; font-size: 14px;">• Priority payment processing</p>
             </div>
         </div>
     </div>

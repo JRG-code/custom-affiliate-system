@@ -34,8 +34,9 @@ define('CAS_VERSION', '1.0.8.1');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-// Include helper functions
+// Include functions
 require_once CAS_PLUGIN_DIR . 'includes/helpers.php';
+require_once CAS_PLUGIN_DIR . 'includes/debug.php';
 
 class Custom_Affiliate_System {
     
@@ -362,8 +363,8 @@ class Custom_Affiliate_System {
         }
         
         // Get commission rate from settings
-$commission_rate = cas_get_tier_setting('tier_1', 'commission');
-$status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
+            $commission_rate = cas_get_tier_setting('tier_1', 'commission');
+            $status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
 
 // Insert affiliate
 $wpdb->insert(
@@ -855,6 +856,16 @@ $wpdb->insert(
             array($this, 'admin_email_page')
         );
 
+        if (cas_is_debug_enabled()) {
+             add_submenu_page(
+                'affiliate-system', 
+                'Debug Log', 
+                'Debug Log', 
+                'manage_options', 
+                'affiliate-debug', 
+                array($this, 'admin_debug_page'));
+}
+
     }
     
     public function admin_overview_page() {
@@ -950,59 +961,46 @@ $wpdb->insert(
         exit;
     }
     
-    // Admin notices for setup status
     public function admin_notices() {
-        $screen = get_current_screen();
-        
-        // Only show on affiliate pages
-        if (!$screen || strpos($screen->id, 'affiliate') === false) {
-            return;
-        }
-        
-        // Don't show on settings page itself
-        if ($screen->id === 'affiliates_page_affiliate-settings') {
-            return;
-        }
-        
-        // Check if settings are configured
-        $status = cas_check_settings_status();
-        
-        if (!$status['configured']) {
-            ?>
-            <div class="notice notice-warning is-dismissible cas-setup-notice">
-                <p><strong>⚠️ Affiliate System Configuration Required</strong></p>
-                <p>Some settings have not yet been defined. Please complete the configuration to ensure that the affiliate programme functions correctly.</p>
-                <?php if (!empty($status['missing'])): ?>
-                <ul>
-                    <?php foreach ($status['missing'] as $item): ?>
-                        <li><?php echo esc_html($item); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-                <?php endif; ?>
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>" class="button button-primary">
-                        Configure now
-                    </a>
-                </p>
-            </div>
-            <?php
-        }
-    }
+    $screen = get_current_screen();
+    if (!$screen || strpos($screen->id, 'affiliate') === false) return;
+    if ($screen->id === 'affiliates_page_affiliate-settings') return;
     
-    // Enqueue admin assets
-    public function enqueue_admin_assets($hook) {
-        // Only load on affiliate pages
-        if (strpos($hook, 'affiliate') === false) {
-            return;
-        }
-        
-        wp_enqueue_style(
-            'cas-admin',
-            CAS_PLUGIN_URL . 'assets/admin.css',
-            array(),
-            CAS_VERSION
-        );
+    $status = cas_check_settings_status();
+    if (!$status['configured']) {
+        ?>
+        <div class="notice notice-warning is-dismissible">
+            <p><strong>⚠️ Affiliate System Setup Required</strong></p>
+            <p>Some settings are not configured yet.</p>
+            <?php if (!empty($status['missing'])): ?>
+            <ul style="margin-left: 20px;">
+                <?php foreach ($status['missing'] as $item): ?>
+                    <li><?php echo esc_html($item); ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <p><a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>" class="button button-primary">Configure Now</a></p>
+        </div>
+        <?php
     }
+}
+
+public function enqueue_admin_assets($hook) {
+    if (strpos($hook, 'affiliate') === false) return;
+    wp_enqueue_style('cas-admin', CAS_PLUGIN_URL . 'assets/admin.css', array(), CAS_VERSION);
+}
+
+public function admin_settings_page() {
+    include CAS_PLUGIN_DIR . 'admin/settings.php';
+}
+
+public function admin_email_page() {
+    include CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
+}
+
+public function admin_debug_page() {
+    include CAS_PLUGIN_DIR . 'admin/debug.php';
+}
 
 }
 
