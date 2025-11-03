@@ -42,21 +42,6 @@ $can_request = $payout_check['can_request'];
 $currency = cas_get_general_setting('currency_symbol');
 $support_email = cas_get_support_email();
 
-$tier_badges = array(
-    'tier_1' => '⭐',
-    'tier_2' => '💎',
-    'ambassador' => '👑'
-);
-
-$tier_name = $tier_names[$affiliate->tier];
-$tier_badge = $tier_badges[$affiliate->tier];
-$commission_rate = $affiliate->commission_rate;
-
-// Minimum payout and payment days based on tier
-$min_payout = ($affiliate->tier === 'tier_1') ? 20 : 0;
-$payment_days = ($affiliate->tier === 'tier_1') ? '30 dias' : '3 dias';
-$can_request = $affiliate->unpaid_commission >= $min_payout;
-
 // Check for pending payout
 $pending_payout = $wpdb->get_row($wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}affiliate_payouts 

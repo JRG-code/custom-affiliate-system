@@ -25,7 +25,13 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
             __FILE__,
             'custom-affiliate-system'
         );
-        $myUpdateChecker->setAuthentication('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');
+
+        // SECURITY: GitHub token should be stored in wp-config.php or environment variable, not hardcoded
+        // Define GITHUB_ACCESS_TOKEN in wp-config.php for private repository access
+        if (defined('GITHUB_ACCESS_TOKEN') && GITHUB_ACCESS_TOKEN) {
+            $myUpdateChecker->setAuthentication(GITHUB_ACCESS_TOKEN);
+        }
+        // For public repositories, authentication is not required
     }
 }
 
@@ -900,13 +906,6 @@ class Custom_Affiliate_System {
             include $file;
         }
     }   
-
-    public function admin_tier_management_page() {
-        $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
-        if (file_exists($file)) {
-            include $file;
-        }
-    }
 
     public function admin_tier_management_page() {
         $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
