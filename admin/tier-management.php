@@ -166,9 +166,9 @@ foreach (array_keys($all_tiers) as $tier_id) {
     <!-- Existing Tiers -->
     <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
         <h2>Existing Tiers</h2>
-        
+
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-            <?php foreach ($available_tiers as $tier_id => $tier_data): 
+            <?php foreach ($all_tiers as $tier_id => $tier_data): 
                 $is_default = in_array($tier_id, array('tier_1', 'tier_2', 'ambassador'));
                 $settings = cas_get_all_tier_settings($tier_id);
                 $usage = $tier_usage[$tier_id] ?? 0;
