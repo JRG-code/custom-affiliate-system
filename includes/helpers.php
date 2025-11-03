@@ -477,58 +477,6 @@ function cas_clear_debug_logs() {
 // ========================================
 // PRO VERSION FUNCTIONS
 // ========================================
-
-/**
- * Get available tiers based on license (includes custom tiers)
- */
-function cas_get_available_tiers() {
-    $default_tiers = array(
-        'tier_1' => array(
-            'name' => 'Tier I',
-            'badge' => '⭐',
-            'description' => 'Basic affiliate tier for new members',
-            'pro' => false
-        ),
-        'tier_2' => array(
-            'name' => 'Tier II', 
-            'badge' => '💎',
-            'description' => 'Advanced tier for proven influencers',
-            'pro' => false
-        )
-    );
-    
-    // If Pro is active, add default pro tiers
-    if (cas_is_pro_active()) {
-        $default_tiers['ambassador'] = array(
-            'name' => 'Ambassador',
-            'badge' => '👑',
-            'description' => 'Premium tier for top performers',
-            'pro' => true
-        );
-        
-        // Add custom tiers created by admin
-        $custom_tiers = get_option('cas_custom_tiers', array());
-        foreach ($custom_tiers as $tier_id => $tier_data) {
-            $default_tiers[$tier_id] = array(
-                'name' => $tier_data['name'],
-                'badge' => $tier_data['badge'] ?? '⭐',
-                'description' => $tier_data['description'] ?? '',
-                'pro' => true
-            );
-        }
-    }
-    
-    return $default_tiers;
-}
-
-/**
- * Check if tier is available in current license
- */
-function cas_is_tier_available($tier) {
-    $available_tiers = cas_get_available_tiers();
-    return isset($available_tiers[$tier]);
-}
-
 /**
  * Update tier name and badge functions to support custom tiers
  */
