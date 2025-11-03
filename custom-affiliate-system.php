@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
- * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard
- * Version: 1.0.8.4
+ * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard. Free: Tier I & II. Pro: Unlimited tiers.
+ * Version: 1.0.9
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -25,17 +25,18 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
             __FILE__,
             'custom-affiliate-system'
         );
-        $myUpdateChecker->setAuthentication('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'); // Replace with token
+        $myUpdateChecker->setAuthentication('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');
     }
 }
 
 // Define constants
-define('CAS_VERSION', '1.0.8.4');
+define('CAS_VERSION', '1.0.9');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Include functions
 require_once CAS_PLUGIN_DIR . 'includes/helpers.php';
+require_once CAS_PLUGIN_DIR . 'includes/pro-license.php';
 
 class Custom_Affiliate_System {
     
@@ -55,12 +56,21 @@ class Custom_Affiliate_System {
         
         // Initialize plugin
         add_action('plugins_loaded', array($this, 'init'));
+        
+        // CRITICAL: Force register settings immediately
+        add_action('admin_init', array($this, 'force_register_settings'), 1);
+    }
+    
+    public function force_register_settings() {
+        // Force register immediately to prevent "not in allowed options" error
+        register_setting('cas_settings_group', 'cas_settings');
+        register_setting('cas_settings_group', 'cas_debug_enabled');
+        register_setting('cas_settings_group', 'cas_pro_license_key');
     }
     
     public function activate() {
         $this->create_tables();
         $this->create_pages();
-
         cas_init_default_settings();
         flush_rewrite_rules();
     }
@@ -184,11 +194,9 @@ class Custom_Affiliate_System {
     }
     
     public function custom_my_account_menu($items) {
-        // Remove default items
         unset($items['downloads']);
-        unset($items['dashboard']); // Remove empty dashboard
+        unset($items['dashboard']);
         
-        // Reorder and customize
         $new_items = array();
         $new_items['affiliate-dashboard'] = __('Influencer Dashboard', 'custom-affiliate');
         $new_items['orders'] = __('Orders', 'woocommerce');
@@ -203,7 +211,6 @@ class Custom_Affiliate_System {
         global $wpdb;
         $user = wp_get_current_user();
         
-        // Get affiliate data
         $affiliate = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
             get_current_user_id()
@@ -213,15 +220,15 @@ class Custom_Affiliate_System {
         
         ?>
         <div class="modern-dashboard-overview">
-            <h2>Olá, <?php echo esc_html($user->display_name); ?>! 👋</h2>
-            <p>Bem-vindo à tua conta. Aqui podes gerir as tuas encomendas e dados.</p>
+            <h2>Hello, <?php echo esc_html($user->display_name); ?>! 👋</h2>
+            <p>Welcome to your account. Here you can manage your orders and details.</p>
             
             <?php if ($affiliate): ?>
             <div class="quick-stats">
                 <div class="stat-box">
                     <span class="stat-icon">🎟️</span>
                     <div>
-                        <strong>O Teu Código</strong>
+                        <strong>Your Code</strong>
                         <p class="stat-value"><?php echo esc_html($affiliate->affiliate_code); ?></p>
                     </div>
                 </div>
@@ -229,7 +236,7 @@ class Custom_Affiliate_System {
                 <div class="stat-box">
                     <span class="stat-icon">💰</span>
                     <div>
-                        <strong>Comissões a Receber</strong>
+                        <strong>Commissions to Receive</strong>
                         <p class="stat-value"><?php echo number_format($affiliate->unpaid_commission, 2); ?>€</p>
                     </div>
                 </div>
@@ -237,65 +244,33 @@ class Custom_Affiliate_System {
                 <div class="stat-box">
                     <span class="stat-icon">📦</span>
                     <div>
-                        <strong>Encomendas</strong>
+                        <strong>Orders</strong>
                         <p class="stat-value"><?php echo $total_orders; ?></p>
                     </div>
                 </div>
             </div>
             
             <div class="dashboard-actions">
-                <a href="<?php echo wc_get_account_endpoint_url('orders'); ?>" class="button">Ver Encomendas</a>
-                <a href="<?php echo wc_get_account_endpoint_url('affiliate-dashboard'); ?>" class="button button-primary">Dashboard Influencer</a>
+                <a href="<?php echo wc_get_account_endpoint_url('orders'); ?>" class="button">View Orders</a>
+                <a href="<?php echo wc_get_account_endpoint_url('affiliate-dashboard'); ?>" class="button button-primary">Influencer Dashboard</a>
             </div>
             <?php endif; ?>
         </div>
         
         <style>
-        .modern-dashboard-overview {
-            padding: 20px 0;
-        }
-        .modern-dashboard-overview h2 {
-            margin-bottom: 10px;
-        }
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        .stat-box {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .stat-icon {
-            font-size: 32px;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-            margin: 5px 0 0 0;
-        }
-        .dashboard-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .dashboard-actions .button {
-            padding: 12px 24px;
-            text-decoration: none;
-        }
+        .modern-dashboard-overview { padding: 20px 0; }
+        .modern-dashboard-overview h2 { margin-bottom: 10px; }
+        .quick-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+        .stat-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; }
+        .stat-icon { font-size: 32px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #667eea; margin: 5px 0 0 0; }
+        .dashboard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .dashboard-actions .button { padding: 12px 24px; text-decoration: none; }
         </style>
         <?php
     }
     
     public function affiliate_dashboard_endpoint_content() {
-        // Load the modern affiliate dashboard template
         $template_file = CAS_PLUGIN_DIR . 'templates/dashboard.php';
         
         if (file_exists($template_file)) {
@@ -306,7 +281,6 @@ class Custom_Affiliate_System {
     }
     
     public function handle_my_account_redirects() {
-        // If not logged in and tries to access my-account -> redirect to login
         if (!is_user_logged_in() && is_account_page()) {
             wp_redirect(wp_login_url(wc_get_page_permalink('myaccount')));
             exit;
@@ -340,7 +314,6 @@ class Custom_Affiliate_System {
         $user = get_userdata($user_id);
         $username = $user->user_login;
         
-        // Generate unique code
         if (preg_match('/^user\d+$/', $username)) {
             $display_name = $user->display_name;
             if (!empty($display_name)) {
@@ -361,31 +334,25 @@ class Custom_Affiliate_System {
             $counter++;
         }
         
-        // Get commission rate from settings
-            $commission_rate = cas_get_tier_setting('tier_1', 'commission');
-            $status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
+        $commission_rate = cas_get_tier_setting('tier_1', 'commission');
+        $status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
 
-// Insert affiliate
-$wpdb->insert(
-    $wpdb->prefix . 'affiliates',
-    array(
-        'user_id' => $user_id,
-        'affiliate_code' => $affiliate_code,
-        'commission_rate' => $commission_rate,
-        'tier' => 'tier_1',
-        'status' => $status
-    ),
+        $wpdb->insert(
+            $wpdb->prefix . 'affiliates',
+            array(
+                'user_id' => $user_id,
+                'affiliate_code' => $affiliate_code,
+                'commission_rate' => $commission_rate,
+                'tier' => 'tier_1',
+                'status' => $status
+            ),
             array('%d', '%s', '%f', '%s', '%s')
         );
         
-        // Get discount from settings
         $coupon_discount = cas_get_tier_setting('tier_1', 'coupon_discount');
         $this->create_coupon($affiliate_code, $user_id, $coupon_discount);
         
-        // Send welcome email
         $this->send_welcome_email($user, $affiliate_code);
-        
-        // Notify admin
         $this->notify_admin_new_affiliate($user, $affiliate_code);
     }
     
@@ -401,8 +368,8 @@ $wpdb->insert(
         $coupon_id = wp_insert_post($coupon);
         
         update_post_meta($coupon_id, 'discount_type', 'fixed_cart');
-        update_post_meta($coupon_id, 'coupon_amount', '5');
-        update_post_meta($coupon_id, 'individual_use', 'yes'); // FIXED: Cannot combine with other coupons
+        update_post_meta($coupon_id, 'coupon_amount', $discount);
+        update_post_meta($coupon_id, 'individual_use', 'yes');
         update_post_meta($coupon_id, 'usage_limit', '');
         update_post_meta($coupon_id, 'usage_limit_per_user', '1');
         update_post_meta($coupon_id, 'expiry_date', '');
@@ -414,18 +381,18 @@ $wpdb->insert(
     
     private function send_welcome_email($user, $code) {
         $to = $user->user_email;
-        $subject = 'O Teu Código de Afiliado está Pronto!';
+        $subject = 'Your Affiliate Code is Ready!';
         $message = "
         <html>
         <body style='font-family: Arial, sans-serif;'>
-            <h2>Bem-vindo ao Programa de Influencers!</h2>
-            <p>Olá <strong>{$user->display_name}</strong>,</p>
+            <h2>Welcome to the Influencer Program!</h2>
+            <p>Hello <strong>{$user->display_name}</strong>,</p>
             <div style='background: #f0f0f0; padding: 20px; margin: 20px 0; text-align: center;'>
                 <h1 style='color: #667eea; font-size: 36px;'>{$code}</h1>
-                <p>O teu código único promocional</p>
+                <p>Your unique promotional code</p>
             </div>
-            <p>Ganhas 10% de comissão em cada venda!</p>
-            <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "' style='background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;'>Ir para Dashboard</a></p>
+            <p>You earn 10% commission on each sale!</p>
+            <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "' style='background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;'>Go to Dashboard</a></p>
         </body>
         </html>
         ";
@@ -435,14 +402,14 @@ $wpdb->insert(
     }
     
     private function notify_admin_new_affiliate($user, $code) {
-        $admin_email = get_option('admin_email');
-        $subject = 'Novo Afiliado Registado!';
+        $admin_email = cas_get_support_email();
+        $subject = 'New Affiliate Registered!';
         $message = "
-        <h2>Novo Afiliado!</h2>
-        <p><strong>Nome:</strong> {$user->display_name}</p>
+        <h2>New Affiliate!</h2>
+        <p><strong>Name:</strong> {$user->display_name}</p>
         <p><strong>Email:</strong> {$user->user_email}</p>
-        <p><strong>Código:</strong> {$code}</p>
-        <p><a href='" . admin_url('admin.php?page=affiliate-system') . "'>Ver Dashboard</a></p>
+        <p><strong>Code:</strong> {$code}</p>
+        <p><a href='" . admin_url('admin.php?page=affiliate-system') . "'>View Dashboard</a></p>
         ";
         
         $headers = array('Content-Type: text/html; charset=UTF-8');
@@ -480,7 +447,6 @@ $wpdb->insert(
                 continue;
             }
             
-            // Check if already tracked
             $exists = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}affiliate_referrals WHERE order_id = %d",
                 $order_id
@@ -490,12 +456,10 @@ $wpdb->insert(
                 continue;
             }
             
-            // Calculate commission
             $order_total = $order->get_total();
             $commission_rate = $affiliate->commission_rate;
             $commission_amount = ($order_total * $commission_rate) / 100;
             
-            // Insert referral
             $wpdb->insert(
                 $wpdb->prefix . 'affiliate_referrals',
                 array(
@@ -510,7 +474,6 @@ $wpdb->insert(
                 array('%d', '%d', '%s', '%f', '%f', '%f', '%s')
             );
             
-            // Update affiliate totals
             $wpdb->query($wpdb->prepare(
                 "UPDATE {$wpdb->prefix}affiliates 
                 SET total_sales = total_sales + %f,
@@ -523,7 +486,6 @@ $wpdb->insert(
                 $affiliate->id
             ));
             
-            // Send notification
             $this->send_commission_email($affiliate_user_id, $coupon_code, $order_total, $commission_amount);
         }
     }
@@ -531,13 +493,13 @@ $wpdb->insert(
     private function send_commission_email($user_id, $code, $total, $commission) {
         $user = get_userdata($user_id);
         $to = $user->user_email;
-        $subject = 'Nova Comissão Ganha!';
+        $subject = 'New Commission Earned!';
         $message = "
-        <h2>Parabéns!</h2>
-        <p>Alguém usou o teu código <strong>{$code}</strong></p>
-        <p><strong>Total da Encomenda:</strong> " . number_format($total, 2) . "€</p>
-        <p><strong>A Tua Comissão:</strong> " . number_format($commission, 2) . "€</p>
-        <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "'>Ver Dashboard</a></p>
+        <h2>Congratulations!</h2>
+        <p>Someone used your code <strong>{$code}</strong></p>
+        <p><strong>Order Total:</strong> " . number_format($total, 2) . "€</p>
+        <p><strong>Your Commission:</strong> " . number_format($commission, 2) . "€</p>
+        <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "'>View Dashboard</a></p>
         ";
         
         $headers = array('Content-Type: text/html; charset=UTF-8');
@@ -553,7 +515,7 @@ $wpdb->insert(
         
         $user_id = get_current_user_id();
         if (!$user_id) {
-            wp_send_json_error('Não autenticado');
+            wp_send_json_error('Not authenticated');
         }
         
         $affiliate = $wpdb->get_row($wpdb->prepare(
@@ -562,16 +524,14 @@ $wpdb->insert(
         ));
         
         if (!$affiliate) {
-            wp_send_json_error('Afiliado não encontrado');
+            wp_send_json_error('Affiliate not found');
         }
         
-        // Check minimum
-        $min_payout = ($affiliate->tier === 'tier_1') ? 20 : 0;
+        $min_payout = cas_get_tier_setting($affiliate->tier, 'min_payout');
         if ($affiliate->unpaid_commission < $min_payout) {
-            wp_send_json_error('Valor mínimo não atingido');
+            wp_send_json_error('Minimum amount not reached');
         }
         
-        // Check for pending payout
         $pending = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_payouts 
             WHERE affiliate_id = %d AND status = 'pending'",
@@ -579,7 +539,7 @@ $wpdb->insert(
         ));
         
         if ($pending > 0) {
-            wp_send_json_error('Já tens um pedido pendente');
+            wp_send_json_error('You already have a pending request');
         }
         
         $payment_method = sanitize_text_field($_POST['payment_method']);
@@ -587,7 +547,6 @@ $wpdb->insert(
         $notes = sanitize_textarea_field($_POST['notes']);
         $amount = $affiliate->unpaid_commission;
         
-        // Insert payout request
         $wpdb->insert(
             $wpdb->prefix . 'affiliate_payouts',
             array(
@@ -595,49 +554,48 @@ $wpdb->insert(
                 'amount' => $amount,
                 'method' => $payment_method,
                 'status' => 'pending',
-                'notes' => "Método: {$payment_method}\nDetalhes: {$payment_details}\n" . (!empty($notes) ? "Notas: {$notes}" : "")
+                'notes' => "Method: {$payment_method}\nDetails: {$payment_details}\n" . (!empty($notes) ? "Notes: {$notes}" : "")
             ),
             array('%d', '%f', '%s', '%s', '%s')
         );
         
-        // Send email to admin
         $user = get_userdata($user_id);
-        $admin_email = 'support@thecouplesbrand.com';
+        $admin_email = cas_get_support_email();
         
-        $tier_names = array('tier_1' => 'Tier I', 'tier_2' => 'Tier II', 'ambassador' => 'Embaixador');
+        $tier_names = array('tier_1' => 'Tier I', 'tier_2' => 'Tier II', 'ambassador' => 'Ambassador');
         $tier_name = $tier_names[$affiliate->tier];
-        $payment_days = ($affiliate->tier === 'tier_1') ? '30 dias' : '3 dias';
+        $payment_days = cas_get_payment_timeline_text($affiliate->tier);
         
-        $subject = 'Novo Pedido de Levantamento - ' . $user->display_name;
+        $subject = 'New Payout Request - ' . $user->display_name;
         $message = "
         <html>
         <body style='font-family: Arial, sans-serif;'>
-        <h2>Novo Pedido de Transferência</h2>
+        <h2>New Payout Request</h2>
         
         <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;'>
-            <p style='margin: 5px 0;'><strong>Afiliado:</strong> {$user->display_name}</p>
-            <p style='margin: 5px 0;'><strong>ID Cliente:</strong> {$user_id}</p>
+            <p style='margin: 5px 0;'><strong>Affiliate:</strong> {$user->display_name}</p>
+            <p style='margin: 5px 0;'><strong>Customer ID:</strong> {$user_id}</p>
             <p style='margin: 5px 0;'><strong>Email:</strong> {$user->user_email}</p>
-            <p style='margin: 5px 0;'><strong>Código:</strong> {$affiliate->affiliate_code}</p>
+            <p style='margin: 5px 0;'><strong>Code:</strong> {$affiliate->affiliate_code}</p>
             <p style='margin: 5px 0;'><strong>Tier:</strong> {$tier_name}</p>
         </div>
         
         <hr>
         
         <div style='background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0;'>
-            <p style='margin: 5px 0; font-size: 18px;'><strong>Valor:</strong> " . number_format($amount, 2) . "€</p>
-            <p style='margin: 5px 0;'><strong>Método:</strong> {$payment_method}</p>
-            <p style='margin: 5px 0;'><strong>Detalhes de Pagamento:</strong></p>
+            <p style='margin: 5px 0; font-size: 18px;'><strong>Amount:</strong> " . number_format($amount, 2) . "€</p>
+            <p style='margin: 5px 0;'><strong>Method:</strong> {$payment_method}</p>
+            <p style='margin: 5px 0;'><strong>Payment Details:</strong></p>
             <p style='margin: 5px 0; background: white; padding: 10px; border-radius: 4px;'>{$payment_details}</p>
-            " . (!empty($notes) ? "<p style='margin: 10px 0 5px 0;'><strong>Notas:</strong></p><p style='margin: 0; background: white; padding: 10px; border-radius: 4px;'>{$notes}</p>" : "") . "
+            " . (!empty($notes) ? "<p style='margin: 10px 0 5px 0;'><strong>Notes:</strong></p><p style='margin: 0; background: white; padding: 10px; border-radius: 4px;'>{$notes}</p>" : "") . "
         </div>
         
         <p style='background: #fef3c7; padding: 15px; border-radius: 6px;'>
-            <strong>Prazo:</strong> Este afiliado deve receber o pagamento em até <strong>{$payment_days}</strong>.
+            <strong>Timeline:</strong> This affiliate should receive payment within <strong>{$payment_days}</strong>.
         </p>
         
         <p style='margin: 30px 0;'>
-            <a href='" . admin_url('admin.php?page=affiliate-payouts') . "' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Ver Pedidos Pendentes</a>
+            <a href='" . admin_url('admin.php?page=affiliate-payouts') . "' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>View Pending Requests</a>
         </p>
         </body>
         </html>
@@ -646,14 +604,14 @@ $wpdb->insert(
         $headers = array('Content-Type: text/html; charset=UTF-8');
         wp_mail($admin_email, $subject, $message, $headers);
         
-        wp_send_json_success('Pedido enviado com sucesso! Receberás uma resposta em breve.');
+        wp_send_json_success('Request sent successfully! You will receive a response soon.');
     }
     
     // === REGISTRATION FORM ===
     
     public function registration_shortcode() {
         if (is_user_logged_in()) {
-            return '<p>Já estás registado. <a href="' . wc_get_page_permalink('myaccount') . '">Ir para Dashboard</a></p>';
+            return '<p>You are already registered. <a href="' . wc_get_page_permalink('myaccount') . '">Go to Dashboard</a></p>';
         }
         
         $template_file = CAS_PLUGIN_DIR . 'templates/registration-form.php';
@@ -707,31 +665,31 @@ $wpdb->insert(
         </style>
         
         <div class="affiliate-reg-form">
-            <h2>Junta-te ao Programa de Influencers</h2>
+            <h2>Join the Influencer Program</h2>
             <p style="text-align: center; color: #666; margin-bottom: 30px;">
-                Ganha 10% de comissão em cada venda!
+                Earn 10% commission on every sale!
             </p>
             
             <form method="post" action="">
                 <?php wp_nonce_field('affiliate_registration', 'affiliate_reg_nonce'); ?>
                 
-                <input type="text" name="full_name" placeholder="Nome Completo" required>
+                <input type="text" name="full_name" placeholder="Full Name" required>
                 <input type="email" name="user_email" placeholder="Email" required>
-                <input type="text" name="username" placeholder="Username (para o teu código)" required>
+                <input type="text" name="username" placeholder="Username (for your code)" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <input type="text" name="whatsapp" placeholder="WhatsApp (opcional)">
-                <input type="text" name="instagram" placeholder="Instagram (opcional)">
+                <input type="text" name="whatsapp" placeholder="WhatsApp (optional)">
+                <input type="text" name="instagram" placeholder="Instagram (optional)">
                 
                 <label style="display: block; margin: 20px 0;">
                     <input type="checkbox" name="terms" required>
-                    Aceito os termos e condições
+                    I accept the terms and conditions
                 </label>
                 
-                <button type="submit" name="register_affiliate">Criar Conta e Receber Código</button>
+                <button type="submit" name="register_affiliate">Create Account and Get Code</button>
             </form>
             
             <p style="text-align: center; margin-top: 20px;">
-                Já tens conta? <a href="<?php echo wp_login_url(wc_get_page_permalink('myaccount')); ?>">Login</a>
+                Already have an account? <a href="<?php echo wp_login_url(wc_get_page_permalink('myaccount')); ?>">Login</a>
             </p>
         </div>
         <?php
@@ -806,66 +764,87 @@ $wpdb->insert(
     
     // === ADMIN MENU ===
     
-    public function admin_menu() {
-        add_menu_page(
-            'Affiliates',
-            'Affiliates',
-            'manage_options',
-            'affiliate-system',
-            array($this, 'admin_overview_page'),
-            'dashicons-groups',
-            30
-        );
-        
+public function admin_menu() {
+    add_menu_page(
+        'Affiliates',
+        'Affiliates',
+        'manage_options',
+        'affiliate-system',
+        array($this, 'admin_overview_page'),
+        'dashicons-groups',
+        30
+    );
+    
+    add_submenu_page(
+        'affiliate-system',
+        'Payouts',
+        'Payouts',
+        'manage_options',
+        'affiliate-payouts',
+        array($this, 'admin_payouts_page')
+    );
+    
+    add_submenu_page(
+        'affiliate-system',
+        'Reports',
+        'Reports',
+        'manage_options',
+        'affiliate-reports',
+        array($this, 'admin_reports_page')
+    );
+
+    add_submenu_page(
+        'affiliate-system',
+        'Settings',
+        'Settings',
+        'manage_options',
+        'affiliate-settings',
+        array($this, 'admin_settings_page')
+    );
+    
+    // Tier Management (Pro only)
+    if (cas_is_pro_active()) {
         add_submenu_page(
             'affiliate-system',
-            'Payouts',
-            'Payouts',
+            'Tier Management',
+            'Tier Management ' . cas_pro_badge(),
             'manage_options',
-            'affiliate-payouts',
-            array($this, 'admin_payouts_page')
+            'affiliate-tiers',
+            array($this, 'admin_tier_management_page')
         );
-        
-        add_submenu_page(
-            'affiliate-system',
-            'Reports',
-            'Reports',
-            'manage_options',
-            'affiliate-reports',
-            array($this, 'admin_reports_page')
-        );
-
-        //settings page
-        add_submenu_page(
-            'affiliate-system',
-            'Settings',
-            'Settings',
-            'manage_options',
-            'affiliate-settings',
-            array($this, 'admin_settings_page')
-        );
-
-        //e-mail page
-        add_submenu_page(
-            'affiliate-system',
-            'Email Affiliates',
-            'Email Affiliates',
-            'manage_options',
-            'affiliate-email',
-            array($this, 'admin_email_page')
-        );
-
-        if (cas_is_debug_enabled()) {
-             add_submenu_page(
-                'affiliate-system', 
-                'Debug Log', 
-                'Debug Log', 
-                'manage_options', 
-                'affiliate-debug', 
-                array($this, 'admin_debug_page'));
-}
-
     }
+
+    add_submenu_page(
+        'affiliate-system',
+        'Email Affiliates',
+        'Email Affiliates',
+        'manage_options',
+        'affiliate-email',
+        array($this, 'admin_email_page')
+    );
+
+    if (cas_is_debug_enabled()) {
+        add_submenu_page(
+            'affiliate-system', 
+            'Debug Log', 
+            'Debug Log', 
+            'manage_options', 
+            'affiliate-debug', 
+            array($this, 'admin_debug_page')
+        );
+    }
+    
+    // Pro upgrade menu item (only if not pro)
+    if (!cas_is_pro_active()) {
+        add_submenu_page(
+            'affiliate-system',
+            'Upgrade to Pro',
+            '<span style="color: #f59e0b;">⭐ Upgrade to Pro</span>',
+            'manage_options',
+            cas_get_upgrade_url()
+        );
+    }
+}
     
     public function admin_overview_page() {
         $file = CAS_PLUGIN_DIR . 'admin/overview.php';
@@ -887,7 +866,7 @@ $wpdb->insert(
             include $file;
         }
     }
-        // Settings page
+    
     public function admin_settings_page() {
         $file = CAS_PLUGIN_DIR . 'admin/settings.php';
         if (file_exists($file)) {
@@ -895,7 +874,6 @@ $wpdb->insert(
         }
     }
     
-        // Email page
     public function admin_email_page() {
         $file = CAS_PLUGIN_DIR . 'admin/email-affiliates.php';
         if (file_exists($file)) {
@@ -903,9 +881,15 @@ $wpdb->insert(
         }
     }
 
-    //debug pade
     public function admin_debug_page() {
         include CAS_PLUGIN_DIR . 'admin/debug.php';
+    }
+
+    public function admin_tier_management_page() {
+    $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
+    if (file_exists($file)) {
+        include $file;
+        }
     }
 
 
@@ -967,34 +951,43 @@ $wpdb->insert(
     }
     
     public function admin_notices() {
-    $screen = get_current_screen();
-    if (!$screen || strpos($screen->id, 'affiliate') === false) return;
-    if ($screen->id === 'affiliates_page_affiliate-settings') return;
-    
-    $status = cas_check_settings_status();
-    if (!$status['configured']) {
-        ?>
-        <div class="notice notice-warning is-dismissible">
-            <p><strong>⚠️ Affiliate System Setup Required</strong></p>
-            <p>Some settings are not configured yet.</p>
-            <?php if (!empty($status['missing'])): ?>
-            <ul style="margin-left: 20px;">
-                <?php foreach ($status['missing'] as $item): ?>
-                    <li><?php echo esc_html($item); ?></li>
-                <?php endforeach; ?>
-            </ul>
-            <?php endif; ?>
-            <p><a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>" class="button button-primary">Configure Now</a></p>
-        </div>
-        <?php
+        $screen = get_current_screen();
+        if (!$screen || strpos($screen->id, 'affiliate') === false) return;
+        if ($screen->id === 'affiliates_page_affiliate-settings') return;
+        
+        // Pro upgrade notice
+        if (!cas_is_pro_active()) {
+            ?>
+            <div class="notice notice-info is-dismissible">
+                <p><strong>🚀 Upgrade to Pro</strong> - Unlock Ambassador tier, unlimited custom tiers, and advanced features! 
+                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank">Learn More →</a></p>
+            </div>
+            <?php
+        }
+        
+        $status = cas_check_settings_status();
+        if (!$status['configured']) {
+            ?>
+            <div class="notice notice-warning is-dismissible">
+                <p><strong>⚠️ Affiliate System Setup Required</strong></p>
+                <p>Some settings are not configured yet.</p>
+                <?php if (!empty($status['missing'])): ?>
+                <ul style="margin-left: 20px;">
+                    <?php foreach ($status['missing'] as $item): ?>
+                        <li><?php echo esc_html($item); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+                <p><a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>" class="button button-primary">Configure Now</a></p>
+            </div>
+            <?php
+        }
     }
-}
 
-public function enqueue_admin_assets($hook) {
-    if (strpos($hook, 'affiliate') === false) return;
-    wp_enqueue_style('cas-admin', CAS_PLUGIN_URL . 'assets/admin.css', array(), CAS_VERSION);
-}
-
+    public function enqueue_admin_assets($hook) {
+        if (strpos($hook, 'affiliate') === false) return;
+        wp_enqueue_style('cas-admin', CAS_PLUGIN_URL . 'assets/admin.css', array(), CAS_VERSION);
+    }
 }
 
 // Initialize plugin

@@ -473,3 +473,328 @@ function cas_clear_debug_logs() {
     $table = $wpdb->prefix . 'affiliate_debug_log';
     $wpdb->query("TRUNCATE TABLE $table");
 }
+
+// ========================================
+// PRO VERSION FUNCTIONS
+// ========================================
+
+/**
+ * Get available tiers based on license (includes custom tiers)
+ */
+function cas_get_available_tiers() {
+    $default_tiers = array(
+        'tier_1' => array(
+            'name' => 'Tier I',
+            'badge' => '⭐',
+            'description' => 'Basic affiliate tier for new members',
+            'pro' => false
+        ),
+        'tier_2' => array(
+            'name' => 'Tier II', 
+            'badge' => '💎',
+            'description' => 'Advanced tier for proven influencers',
+            'pro' => false
+        )
+    );
+    
+    // If Pro is active, add default pro tiers
+    if (cas_is_pro_active()) {
+        $default_tiers['ambassador'] = array(
+            'name' => 'Ambassador',
+            'badge' => '👑',
+            'description' => 'Premium tier for top performers',
+            'pro' => true
+        );
+        
+        // Add custom tiers created by admin
+        $custom_tiers = get_option('cas_custom_tiers', array());
+        foreach ($custom_tiers as $tier_id => $tier_data) {
+            $default_tiers[$tier_id] = array(
+                'name' => $tier_data['name'],
+                'badge' => $tier_data['badge'] ?? '⭐',
+                'description' => $tier_data['description'] ?? '',
+                'pro' => true
+            );
+        }
+    }
+    
+    return $default_tiers;
+}
+
+/**
+ * Check if tier is available in current license
+ */
+function cas_is_tier_available($tier) {
+    $available_tiers = cas_get_available_tiers();
+    return isset($available_tiers[$tier]);
+}
+
+/**
+ * Update tier name and badge functions to support custom tiers
+ */
+function cas_get_tier_name_v2($tier) {
+    $available_tiers = cas_get_available_tiers();
+    
+    if (isset($available_tiers[$tier]['name'])) {
+        return $available_tiers[$tier]['name'];
+    }
+    
+    // Fallback to old function
+    return cas_get_tier_name($tier);
+}
+
+function cas_get_tier_badge_v2($tier) {
+    $available_tiers = cas_get_available_tiers();
+    
+    if (isset($available_tiers[$tier]['badge'])) {
+        return $available_tiers[$tier]['badge'];
+    }
+    
+    // Fallback to old function
+    return cas_get_tier_badge($tier);
+}
+
+/**
+ * Update tier color to support custom tiers
+ */
+function cas_get_tier_color_v2($tier) {
+    // Default colors
+    $colors = array(
+        'tier_1' => '#667eea',
+        'tier_2' => '#f59e0b',
+        'ambassador' => '#ec4899',
+        'platinum' => '#a78bfa',
+        'diamond' => '#06b6d4',
+        'elite' => '#f43f5e',
+        'vip' => '#eab308',
+        'partner' => '#10b981'
+    );
+    
+    // Check if custom color is set
+    $custom_tiers = get_option('cas_custom_tiers', array());
+    if (isset($custom_tiers[$tier]['color'])) {
+        return $custom_tiers[$tier]['color'];
+    }
+    
+    return isset($colors[$tier]) ? $colors[$tier] : '#667eea';
+}
+
+/**
+ * Get tier setting with support for custom tiers
+ */
+function cas_get_tier_setting_v2($tier, $field) {
+    $options = get_option('cas_settings', array());
+    
+    // Check if setting exists in cas_settings
+    if (isset($options[$tier][$field])) {
+        return $options[$tier][$field];
+    }
+    
+    // Check custom tiers
+    $custom_tiers = get_option('cas_custom_tiers', array());
+    if (isset($custom_tiers[$tier][$field])) {
+        return $custom_tiers[$tier][$field];
+    }
+    
+    // Fallback to original function
+    return cas_get_tier_setting($tier, $field);
+}
+
+/**
+ * Update affiliate counts to include all tiers
+ */
+function cas_get_affiliate_counts_by_tier_v2() {
+    global $wpdb;
+    
+    $counts = $wpdb->get_results("
+        SELECT tier, COUNT(*) as count
+        FROM {$wpdb->prefix}affiliates
+        GROUP BY tier
+    ", OBJECT_K);
+    
+    $result = array();
+    $available_tiers = cas_get_available_tiers();
+    
+    // Initialize all available tiers with 0
+    foreach (array_keys($available_tiers) as $tier) {
+        $result[$tier] = 0;
+    }
+    
+    // Fill with actual counts
+    foreach ($counts as $tier => $data) {
+        $result[$tier] = (int) $data->count;
+    }
+    
+    return $result;
+}
+
+/**
+ * Validate tier ID format
+ */
+function cas_validate_tier_id($tier_id) {
+    // Must be lowercase, alphanumeric + underscore only
+    if (!preg_match('/^[a-z0-9_]+$/', $tier_id)) {
+        return false;
+    }
+    
+    // Must not be a protected name
+    $protected = array('tier_1', 'tier_2', 'ambassador');
+    if (in_array($tier_id, $protected)) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Check if tier can be deleted
+ */
+function cas_can_delete_tier($tier_id) {
+    global $wpdb;
+    
+    // Cannot delete default tiers
+    $protected = array('tier_1', 'tier_2', 'ambassador');
+    if (in_array($tier_id, $protected)) {
+        return false;
+    }
+    
+    // Check if any affiliates are using this tier
+    $count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}affiliates WHERE tier = %s",
+        $tier_id
+    ));
+    
+    return $count == 0;
+}
+
+/**
+ * Delete custom tier
+ */
+function cas_delete_custom_tier($tier_id) {
+    if (!cas_can_delete_tier($tier_id)) {
+        return false;
+    }
+    
+    // Remove from custom tiers
+    $custom_tiers = get_option('cas_custom_tiers', array());
+    unset($custom_tiers[$tier_id]);
+    update_option('cas_custom_tiers', $custom_tiers);
+    
+    // Remove from settings
+    $cas_settings = get_option('cas_settings', array());
+    unset($cas_settings[$tier_id]);
+    update_option('cas_settings', $cas_settings);
+    
+    return true;
+}
+
+/**
+ * Create custom tier
+ */
+function cas_create_custom_tier($tier_id, $data) {
+    // Validate tier ID
+    if (!cas_validate_tier_id($tier_id)) {
+        return array('success' => false, 'message' => 'Invalid tier ID format');
+    }
+    
+    // Check if already exists
+    $existing_tiers = get_option('cas_custom_tiers', array());
+    if (isset($existing_tiers[$tier_id])) {
+        return array('success' => false, 'message' => 'Tier ID already exists');
+    }
+    
+    // Validate required fields
+    if (empty($data['name'])) {
+        return array('success' => false, 'message' => 'Tier name is required');
+    }
+    
+    // Add to custom tiers
+    $existing_tiers[$tier_id] = array(
+        'name' => sanitize_text_field($data['name']),
+        'badge' => sanitize_text_field($data['badge'] ?? '⭐'),
+        'description' => sanitize_text_field($data['description'] ?? ''),
+        'commission' => floatval($data['commission'] ?? 25),
+        'min_payout' => floatval($data['min_payout'] ?? 0),
+        'payment_days' => intval($data['payment_days'] ?? 3),
+        'coupon_discount' => floatval($data['coupon_discount'] ?? 5),
+        'color' => sanitize_hex_color($data['color'] ?? '#667eea'),
+        'created_at' => current_time('mysql')
+    );
+    
+    update_option('cas_custom_tiers', $existing_tiers);
+    
+    // Also add to cas_settings for compatibility
+    $cas_settings = get_option('cas_settings', array());
+    $cas_settings[$tier_id] = array(
+        'commission' => $existing_tiers[$tier_id]['commission'],
+        'min_payout' => $existing_tiers[$tier_id]['min_payout'],
+        'payment_days' => $existing_tiers[$tier_id]['payment_days'],
+        'coupon_discount' => $existing_tiers[$tier_id]['coupon_discount']
+    );
+    update_option('cas_settings', $cas_settings);
+    
+    return array('success' => true, 'message' => 'Tier created successfully');
+}
+
+/**
+ * Update custom tier
+ */
+function cas_update_custom_tier($tier_id, $data) {
+    $custom_tiers = get_option('cas_custom_tiers', array());
+    
+    if (!isset($custom_tiers[$tier_id])) {
+        return array('success' => false, 'message' => 'Tier not found');
+    }
+    
+    // Update fields
+    if (isset($data['name'])) {
+        $custom_tiers[$tier_id]['name'] = sanitize_text_field($data['name']);
+    }
+    if (isset($data['badge'])) {
+        $custom_tiers[$tier_id]['badge'] = sanitize_text_field($data['badge']);
+    }
+    if (isset($data['commission'])) {
+        $custom_tiers[$tier_id]['commission'] = floatval($data['commission']);
+    }
+    if (isset($data['min_payout'])) {
+        $custom_tiers[$tier_id]['min_payout'] = floatval($data['min_payout']);
+    }
+    if (isset($data['payment_days'])) {
+        $custom_tiers[$tier_id]['payment_days'] = intval($data['payment_days']);
+    }
+    if (isset($data['coupon_discount'])) {
+        $custom_tiers[$tier_id]['coupon_discount'] = floatval($data['coupon_discount']);
+    }
+    if (isset($data['color'])) {
+        $custom_tiers[$tier_id]['color'] = sanitize_hex_color($data['color']);
+    }
+    
+    update_option('cas_custom_tiers', $custom_tiers);
+    
+    // Update cas_settings too
+    $cas_settings = get_option('cas_settings', array());
+    $cas_settings[$tier_id] = array(
+        'commission' => $custom_tiers[$tier_id]['commission'],
+        'min_payout' => $custom_tiers[$tier_id]['min_payout'],
+        'payment_days' => $custom_tiers[$tier_id]['payment_days'],
+        'coupon_discount' => $custom_tiers[$tier_id]['coupon_discount']
+    );
+    update_option('cas_settings', $cas_settings);
+    
+    return array('success' => true, 'message' => 'Tier updated successfully');
+}
+
+/**
+ * Get all custom tiers
+ */
+function cas_get_custom_tiers() {
+    return get_option('cas_custom_tiers', array());
+}
+
+/**
+ * Count total custom tiers
+ */
+function cas_count_custom_tiers() {
+    $custom_tiers = get_option('cas_custom_tiers', array());
+    return count($custom_tiers);
+}
