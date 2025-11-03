@@ -16,99 +16,137 @@ global $wpdb;
 
 // Handle Create New Tier
 if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
-    $tier_id = sanitize_key($_POST['tier_id']);
-    $tier_name = sanitize_text_field($_POST['tier_name']);
-    $tier_badge = sanitize_text_field($_POST['tier_badge']);
-    $commission = floatval($_POST['commission']);
-    $min_payout = floatval($_POST['min_payout']);
-    $payment_days = intval($_POST['payment_days']);
-    $coupon_discount = floatval($_POST['coupon_discount']);
-    
-    $errors = array();
-    
-    // Validation
-    if (empty($tier_id)) $errors[] = 'Tier ID is required';
-    if (empty($tier_name)) $errors[] = 'Tier name is required';
-    if ($commission < 0 || $commission > 100) $errors[] = 'Commission must be between 0-100%';
-    
-    // Check if tier ID already exists
-    $existing_tiers = get_option('cas_custom_tiers', array());
-    if (isset($existing_tiers[$tier_id])) {
-        $errors[] = 'Tier ID already exists. Please choose a different ID.';
-    }
-    
-    if (empty($errors)) {
-        $existing_tiers[$tier_id] = array(
-            'name' => $tier_name,
-            'badge' => $tier_badge,
-            'commission' => $commission,
-            'min_payout' => $min_payout,
-            'payment_days' => $payment_days,
-            'coupon_discount' => $coupon_discount,
-            'created_at' => current_time('mysql')
-        );
+    try {
+        $tier_id = sanitize_key($_POST['tier_id']);
+        $tier_name = sanitize_text_field($_POST['tier_name']);
+        $tier_badge = !empty($_POST['tier_badge']) ? sanitize_text_field($_POST['tier_badge']) : '⭐';
+        $commission = floatval($_POST['commission']);
+        $min_payout = floatval($_POST['min_payout']);
+        $payment_days = intval($_POST['payment_days']);
+        $coupon_discount = floatval($_POST['coupon_discount']);
         
-        update_option('cas_custom_tiers', $existing_tiers);
+        $errors = array();
         
-        // Also update cas_settings
-        $cas_settings = get_option('cas_settings', array());
-        $cas_settings[$tier_id] = array(
-            'commission' => $commission,
-            'min_payout' => $min_payout,
-            'payment_days' => $payment_days,
-            'coupon_discount' => $coupon_discount
-        );
-        update_option('cas_settings', $cas_settings);
-        
-        echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" created successfully!</p></div>';
-    } else {
-        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
-        foreach ($errors as $error) {
-            echo '<li>' . esc_html($error) . '</li>';
+        // Validation
+        if (empty($tier_id)) {
+            $errors[] = 'Tier ID is required';
+        } elseif (!preg_match('/^[a-z0-9_]+$/', $tier_id)) {
+            $errors[] = 'Tier ID must be lowercase letters, numbers and underscores only';
         }
-        echo '</ul></div>';
+        
+        if (empty($tier_name)) {
+            $errors[] = 'Tier name is required';
+        }
+        
+        if ($commission < 0 || $commission > 100) {
+            $errors[] = 'Commission must be between 0-100%';
+        }
+        
+        // Check if tier ID already exists (check both custom tiers and default tiers)
+        $default_tiers = array('tier_1', 'tier_2', 'ambassador');
+        if (in_array($tier_id, $default_tiers)) {
+            $errors[] = 'Cannot use reserved tier ID. Please choose a different ID.';
+        }
+        
+        $existing_tiers = get_option('cas_custom_tiers', array());
+        if (isset($existing_tiers[$tier_id])) {
+            $errors[] = 'Tier ID already exists. Please choose a different ID.';
+        }
+        
+        if (empty($errors)) {
+            // Create tier data
+            $tier_data = array(
+                'name' => $tier_name,
+                'badge' => $tier_badge,
+                'commission' => $commission,
+                'min_payout' => $min_payout,
+                'payment_days' => $payment_days,
+                'coupon_discount' => $coupon_discount,
+                'created_at' => current_time('mysql')
+            );
+            
+            // Add to custom tiers
+            $existing_tiers[$tier_id] = $tier_data;
+            update_option('cas_custom_tiers', $existing_tiers);
+            
+            // Also update cas_settings for compatibility
+            $cas_settings = get_option('cas_settings', array());
+            if (!is_array($cas_settings)) {
+                $cas_settings = array();
+            }
+            
+            $cas_settings[$tier_id] = array(
+                'commission' => $commission,
+                'min_payout' => $min_payout,
+                'payment_days' => $payment_days,
+                'coupon_discount' => $coupon_discount
+            );
+            update_option('cas_settings', $cas_settings);
+            
+            echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" created successfully!</p></div>';
+        } else {
+            echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
+            foreach ($errors as $error) {
+                echo '<li>' . esc_html($error) . '</li>';
+            }
+            echo '</ul></div>';
+        }
+    } catch (Exception $e) {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Error creating tier:</strong> ' . esc_html($e->getMessage()) . '</p></div>';
     }
 }
 
 // Handle Delete Tier
 if (isset($_POST['delete_tier']) && check_admin_referer('cas_delete_tier')) {
-    $tier_id = sanitize_key($_POST['tier_id']);
-    
-    // Prevent deleting default tiers
-    $protected_tiers = array('tier_1', 'tier_2', 'ambassador');
-    if (in_array($tier_id, $protected_tiers)) {
-        echo '<div class="notice notice-error is-dismissible"><p>❌ Cannot delete default tier.</p></div>';
-    } else {
-        // Check if any affiliates are using this tier
-        $count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affiliates WHERE tier = %s",
-            $tier_id
-        ));
+    try {
+        $tier_id = sanitize_key($_POST['tier_id']);
         
-        if ($count > 0) {
-            echo '<div class="notice notice-error is-dismissible"><p>❌ Cannot delete tier. ' . $count . ' affiliate(s) are using this tier. Please move them to another tier first.</p></div>';
+        // Prevent deleting default tiers
+        $protected_tiers = array('tier_1', 'tier_2', 'ambassador');
+        if (in_array($tier_id, $protected_tiers)) {
+            echo '<div class="notice notice-error is-dismissible"><p>❌ Cannot delete default tier.</p></div>';
         } else {
-            $custom_tiers = get_option('cas_custom_tiers', array());
-            unset($custom_tiers[$tier_id]);
-            update_option('cas_custom_tiers', $custom_tiers);
+            // Check if any affiliates are using this tier
+            $count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}affiliates WHERE tier = %s",
+                $tier_id
+            ));
             
-            // Remove from settings
-            $cas_settings = get_option('cas_settings', array());
-            unset($cas_settings[$tier_id]);
-            update_option('cas_settings', $cas_settings);
-            
-            echo '<div class="notice notice-success is-dismissible"><p>✅ Tier deleted successfully!</p></div>';
+            if ($count > 0) {
+                echo '<div class="notice notice-error is-dismissible"><p>❌ Cannot delete tier. ' . $count . ' affiliate(s) are using this tier. Please move them to another tier first.</p></div>';
+            } else {
+                // Delete from custom tiers
+                $custom_tiers = get_option('cas_custom_tiers', array());
+                if (isset($custom_tiers[$tier_id])) {
+                    $deleted_name = $custom_tiers[$tier_id]['name'];
+                    unset($custom_tiers[$tier_id]);
+                    update_option('cas_custom_tiers', $custom_tiers);
+                    
+                    // Remove from settings
+                    $cas_settings = get_option('cas_settings', array());
+                    if (is_array($cas_settings) && isset($cas_settings[$tier_id])) {
+                        unset($cas_settings[$tier_id]);
+                        update_option('cas_settings', $cas_settings);
+                    }
+                    
+                    echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($deleted_name) . '" deleted successfully!</p></div>';
+                } else {
+                    echo '<div class="notice notice-error is-dismissible"><p>❌ Tier not found.</p></div>';
+                }
+            }
         }
+    } catch (Exception $e) {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Error deleting tier:</strong> ' . esc_html($e->getMessage()) . '</p></div>';
     }
 }
 
-// Get all tiers
-$available_tiers = cas_get_available_tiers();
-$custom_tiers = get_option('cas_custom_tiers', array());
+// Get all tiers (default + custom)
+$all_tiers = cas_get_available_tiers();
+$custom_tiers_only = get_option('cas_custom_tiers', array());
 
 // Get usage count for each tier
 $tier_usage = array();
-foreach (array_keys($available_tiers) as $tier_id) {
+foreach (array_keys($all_tiers) as $tier_id) {
     $tier_usage[$tier_id] = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM {$wpdb->prefix}affiliates WHERE tier = %s",
         $tier_id

@@ -763,8 +763,7 @@ class Custom_Affiliate_System {
     }
     
     // === ADMIN MENU ===
-    
-public function admin_menu() {
+    public function admin_menu() {
     add_menu_page(
         'Affiliates',
         'Affiliates',
@@ -773,6 +772,15 @@ public function admin_menu() {
         array($this, 'admin_overview_page'),
         'dashicons-groups',
         30
+    );
+    
+    add_submenu_page(
+        'affiliate-system',
+        'Add Affiliate',
+        'Add Affiliate',
+        'manage_options',
+        'affiliate-add',
+        array($this, 'admin_add_affiliate_page')
     );
     
     add_submenu_page(
@@ -845,6 +853,7 @@ public function admin_menu() {
         );
     }
 }
+
     
     public function admin_overview_page() {
         $file = CAS_PLUGIN_DIR . 'admin/overview.php';
@@ -885,10 +894,24 @@ public function admin_menu() {
         include CAS_PLUGIN_DIR . 'admin/debug.php';
     }
 
+    public function admin_add_affiliate_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/add-affiliate.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }   
+
     public function admin_tier_management_page() {
-    $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
-    if (file_exists($file)) {
-        include $file;
+        $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
+    public function admin_tier_management_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
+        if (file_exists($file)) {
+            include $file;
         }
     }
 
