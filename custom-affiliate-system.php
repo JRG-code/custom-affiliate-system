@@ -1218,7 +1218,14 @@ class Custom_Affiliate_System {
             include $file;
         }
     }
-    
+
+    public function admin_code_changes_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/code-changes.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
     public function admin_settings_page() {
         $file = CAS_PLUGIN_DIR . 'admin/settings.php';
         if (file_exists($file)) {
