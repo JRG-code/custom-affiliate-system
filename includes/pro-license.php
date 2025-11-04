@@ -80,43 +80,8 @@ function cas_deactivate_license() {
  * Get available tiers based on license
  */
 function cas_get_available_tiers() {
-    if (cas_is_pro_active()) {
-        return array(
-            'tier_1' => array(
-                'name' => 'Tier I',
-                'badge' => '⭐',
-                'description' => 'Basic affiliate tier for new members',
-                'pro' => false
-            ),
-            'tier_2' => array(
-                'name' => 'Tier II', 
-                'badge' => '💎',
-                'description' => 'Advanced tier for proven influencers',
-                'pro' => false
-            ),
-            'ambassador' => array(
-                'name' => 'Ambassador',
-                'badge' => '👑',
-                'description' => 'Premium tier for top performers',
-                'pro' => true
-            ),
-            'platinum' => array(
-                'name' => 'Platinum',
-                'badge' => '💫',
-                'description' => 'Exclusive tier with highest rewards',
-                'pro' => true
-            ),
-            'diamond' => array(
-                'name' => 'Diamond',
-                'badge' => '💠',
-                'description' => 'Ultimate tier for elite partners',
-                'pro' => true
-            )
-        );
-    }
-    
-    // Free version - only Tier I and II
-    return array(
+    // Start with default tiers
+    $tiers = array(
         'tier_1' => array(
             'name' => 'Tier I',
             'badge' => '⭐',
@@ -125,11 +90,34 @@ function cas_get_available_tiers() {
         ),
         'tier_2' => array(
             'name' => 'Tier II',
-            'badge' => '💎', 
+            'badge' => '💎',
             'description' => 'Advanced tier for proven influencers',
             'pro' => false
         )
     );
+
+    // Add Ambassador tier if Pro is active
+    if (cas_is_pro_active()) {
+        $tiers['ambassador'] = array(
+            'name' => 'Ambassador',
+            'badge' => '👑',
+            'description' => 'Premium tier for top performers',
+            'pro' => true
+        );
+
+        // Add custom tiers from database
+        $custom_tiers = get_option('cas_custom_tiers', array());
+        foreach ($custom_tiers as $tier_id => $tier_data) {
+            $tiers[$tier_id] = array(
+                'name' => $tier_data['name'],
+                'badge' => $tier_data['badge'],
+                'description' => $tier_data['description'] ?? '',
+                'pro' => true
+            );
+        }
+    }
+
+    return $tiers;
 }
 
 /**

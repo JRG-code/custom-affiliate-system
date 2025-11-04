@@ -26,22 +26,25 @@ function cas_get_tier_setting($tier, $field) {
     // Estes valores são usados quando o plugin é instalado pela primeira vez
     $defaults = array(
         'tier_1' => array(
-            'commission' => 10,      // 10% de comissão
-            'min_payout' => 20,      // Mínimo 20€ para levantar
-            'payment_days' => 30,    // Pagamento em 30 dias
-            'coupon_discount' => 5   // 5€ de desconto no cupão
+            'commission' => 10,         // 10% de comissão
+            'min_payout' => 20,         // Mínimo 20€ para levantar
+            'payment_days' => 30,       // Pagamento em 30 dias
+            'coupon_discount' => 5,     // 5€ de desconto no cupão
+            'allow_code_edit' => 0      // Não permite editar código
         ),
         'tier_2' => array(
-            'commission' => 15,      // 15% de comissão
-            'min_payout' => 0,       // Sem mínimo
-            'payment_days' => 3,     // Pagamento em 3 dias
-            'coupon_discount' => 5   // 5€ de desconto
+            'commission' => 15,         // 15% de comissão
+            'min_payout' => 0,          // Sem mínimo
+            'payment_days' => 3,        // Pagamento em 3 dias
+            'coupon_discount' => 5,     // 5€ de desconto
+            'allow_code_edit' => 1      // Permite editar código 1x/mês
         ),
         'ambassador' => array(
-            'commission' => 20,      // 20% de comissão
-            'min_payout' => 0,       // Sem mínimo
-            'payment_days' => 3,     // Pagamento em 3 dias
-            'coupon_discount' => 5   // 5€ de desconto
+            'commission' => 20,         // 20% de comissão
+            'min_payout' => 0,          // Sem mínimo
+            'payment_days' => 3,        // Pagamento em 3 dias
+            'coupon_discount' => 5,     // 5€ de desconto
+            'allow_code_edit' => 1      // Permite editar código 1x/mês
         )
     );
     
@@ -177,12 +180,34 @@ function cas_get_support_email() {
 }
 
 /**
+ * Verificar se auto-criação de afiliados está ativa
+ *
+ * @return bool
+ */
+function cas_is_auto_create_affiliate_enabled() {
+    $value = cas_get_general_setting('auto_create_affiliate');
+    // Default to true if not set
+    return isset($value) ? (bool) $value : true;
+}
+
+/**
  * Verificar se auto-aprovação está ativa
- * 
+ *
  * @return bool
  */
 function cas_is_auto_approve_enabled() {
     return (bool) cas_get_general_setting('auto_approve');
+}
+
+/**
+ * Verificar se envio de welcome email está ativo
+ *
+ * @return bool
+ */
+function cas_is_send_welcome_email_enabled() {
+    $value = cas_get_general_setting('send_welcome_email');
+    // Default to true if not set
+    return isset($value) ? (bool) $value : true;
 }
 
 /**
@@ -248,7 +273,7 @@ function cas_check_settings_status() {
  */
 function cas_init_default_settings() {
     $existing = get_option('cas_settings');
-    
+
     // Só criar se não existirem configurações
     if (empty($existing)) {
         $defaults = array(
@@ -256,32 +281,37 @@ function cas_init_default_settings() {
                 'commission' => 10,
                 'min_payout' => 20,
                 'payment_days' => 30,
-                'coupon_discount' => 5
+                'coupon_discount' => 5,
+                'allow_code_edit' => 0
             ),
             'tier_2' => array(
                 'commission' => 15,
                 'min_payout' => 0,
                 'payment_days' => 3,
-                'coupon_discount' => 5
+                'coupon_discount' => 5,
+                'allow_code_edit' => 1
             ),
             'ambassador' => array(
                 'commission' => 20,
                 'min_payout' => 0,
                 'payment_days' => 3,
-                'coupon_discount' => 5
+                'coupon_discount' => 5,
+                'allow_code_edit' => 1
             ),
             'general' => array(
                 'currency_symbol' => '€',
                 'support_email' => get_option('admin_email'),
+                'auto_create_affiliate' => 1,
                 'auto_approve' => 1,
+                'send_welcome_email' => 1,
                 'terms_page' => 0
             )
         );
-        
+
         update_option('cas_settings', $defaults);
         return true;
     }
-    
+
     return false;
 }
 
@@ -665,6 +695,7 @@ function cas_create_custom_tier($tier_id, $data) {
         'min_payout' => floatval($data['min_payout'] ?? 0),
         'payment_days' => intval($data['payment_days'] ?? 3),
         'coupon_discount' => floatval($data['coupon_discount'] ?? 5),
+        'allow_code_edit' => isset($data['allow_code_edit']) ? intval($data['allow_code_edit']) : 1,
         'color' => sanitize_hex_color($data['color'] ?? '#667eea'),
         'created_at' => current_time('mysql')
     );
@@ -677,7 +708,8 @@ function cas_create_custom_tier($tier_id, $data) {
         'commission' => $existing_tiers[$tier_id]['commission'],
         'min_payout' => $existing_tiers[$tier_id]['min_payout'],
         'payment_days' => $existing_tiers[$tier_id]['payment_days'],
-        'coupon_discount' => $existing_tiers[$tier_id]['coupon_discount']
+        'coupon_discount' => $existing_tiers[$tier_id]['coupon_discount'],
+        'allow_code_edit' => $existing_tiers[$tier_id]['allow_code_edit']
     );
     update_option('cas_settings', $cas_settings);
     
@@ -713,6 +745,9 @@ function cas_update_custom_tier($tier_id, $data) {
     if (isset($data['coupon_discount'])) {
         $custom_tiers[$tier_id]['coupon_discount'] = floatval($data['coupon_discount']);
     }
+    if (isset($data['allow_code_edit'])) {
+        $custom_tiers[$tier_id]['allow_code_edit'] = intval($data['allow_code_edit']);
+    }
     if (isset($data['color'])) {
         $custom_tiers[$tier_id]['color'] = sanitize_hex_color($data['color']);
     }
@@ -725,7 +760,8 @@ function cas_update_custom_tier($tier_id, $data) {
         'commission' => $custom_tiers[$tier_id]['commission'],
         'min_payout' => $custom_tiers[$tier_id]['min_payout'],
         'payment_days' => $custom_tiers[$tier_id]['payment_days'],
-        'coupon_discount' => $custom_tiers[$tier_id]['coupon_discount']
+        'coupon_discount' => $custom_tiers[$tier_id]['coupon_discount'],
+        'allow_code_edit' => $custom_tiers[$tier_id]['allow_code_edit']
     );
     update_option('cas_settings', $cas_settings);
     

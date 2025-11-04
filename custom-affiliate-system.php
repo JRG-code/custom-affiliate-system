@@ -164,7 +164,7 @@ class Custom_Affiliate_System {
     public function init() {
         // Register shortcodes
         add_shortcode('affiliate_registration', array($this, 'registration_shortcode'));
-        
+
         // Hooks
         add_action('user_register', array($this, 'auto_create_affiliate'), 10, 1);
         add_action('woocommerce_created_customer', array($this, 'auto_create_affiliate'), 10, 1);
@@ -176,6 +176,9 @@ class Custom_Affiliate_System {
         add_action('wp_ajax_request_affiliate_payout', array($this, 'handle_payout_request'));
         add_action('wp_ajax_toggle_affiliate_status', array($this, 'toggle_status_ajax'));
         add_action('wp_ajax_export_affiliate_data', array($this, 'export_data'));
+
+        // Scheduled email hook (10-second delay)
+        add_action('cas_send_welcome_email', array($this, 'send_welcome_email_scheduled'), 10, 2);
         
         // WooCommerce My Account customization
         add_action('init', array($this, 'add_my_account_endpoints'));
@@ -316,10 +319,25 @@ class Custom_Affiliate_System {
     
     public function auto_create_affiliate($user_id) {
         global $wpdb;
-        
+
+        // Check if auto-create is enabled
+        if (!cas_is_auto_create_affiliate_enabled()) {
+            return;
+        }
+
+        // Check if affiliate already exists
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
+            $user_id
+        ));
+
+        if ($existing) {
+            return; // Affiliate already exists
+        }
+
         $user = get_userdata($user_id);
         $username = $user->user_login;
-        
+
         if (preg_match('/^user\d+$/', $username)) {
             $display_name = $user->display_name;
             if (!empty($display_name)) {
@@ -331,7 +349,7 @@ class Custom_Affiliate_System {
         $affiliate_code = strtoupper($username) . '5';
         $counter = 1;
         $original_code = $affiliate_code;
-        
+
         while ($wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}affiliates WHERE affiliate_code = %s",
             $affiliate_code
@@ -339,7 +357,7 @@ class Custom_Affiliate_System {
             $affiliate_code = $original_code . $counter;
             $counter++;
         }
-        
+
         $commission_rate = cas_get_tier_setting('tier_1', 'commission');
         $status = cas_is_auto_approve_enabled() ? 'active' : 'pending';
 
@@ -354,11 +372,15 @@ class Custom_Affiliate_System {
             ),
             array('%d', '%s', '%f', '%s', '%s')
         );
-        
+
         $coupon_discount = cas_get_tier_setting('tier_1', 'coupon_discount');
         $this->create_coupon($affiliate_code, $user_id, $coupon_discount);
-        
-        $this->send_welcome_email($user, $affiliate_code);
+
+        // Schedule welcome email with 10-second delay if enabled
+        if (cas_is_send_welcome_email_enabled()) {
+            wp_schedule_single_event(time() + 10, 'cas_send_welcome_email', array($user_id, $affiliate_code));
+        }
+
         $this->notify_admin_new_affiliate($user, $affiliate_code);
     }
     
@@ -385,6 +407,16 @@ class Custom_Affiliate_System {
         return $coupon_id;
     }
     
+    /**
+     * Scheduled welcome email (called by wp_cron after 10-second delay)
+     */
+    public function send_welcome_email_scheduled($user_id, $code) {
+        $user = get_userdata($user_id);
+        if ($user) {
+            $this->send_welcome_email($user, $code);
+        }
+    }
+
     private function send_welcome_email($user, $code) {
         $to = $user->user_email;
         $subject = 'Your Affiliate Code is Ready!';
@@ -402,7 +434,7 @@ class Custom_Affiliate_System {
         </body>
         </html>
         ";
-        
+
         $headers = array('Content-Type: text/html; charset=UTF-8');
         wp_mail($to, $subject, $message, $headers);
     }

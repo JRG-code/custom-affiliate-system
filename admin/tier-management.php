@@ -24,6 +24,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
         $min_payout = floatval($_POST['min_payout']);
         $payment_days = intval($_POST['payment_days']);
         $coupon_discount = floatval($_POST['coupon_discount']);
+        $allow_code_edit = isset($_POST['allow_code_edit']) ? 1 : 0;
         
         $errors = array();
         
@@ -62,6 +63,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'min_payout' => $min_payout,
                 'payment_days' => $payment_days,
                 'coupon_discount' => $coupon_discount,
+                'allow_code_edit' => $allow_code_edit,
                 'created_at' => current_time('mysql')
             );
             
@@ -79,7 +81,8 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'commission' => $commission,
                 'min_payout' => $min_payout,
                 'payment_days' => $payment_days,
-                'coupon_discount' => $coupon_discount
+                'coupon_discount' => $coupon_discount,
+                'allow_code_edit' => $allow_code_edit
             );
             update_option('cas_settings', $cas_settings);
             
@@ -186,6 +189,7 @@ foreach (array_keys($all_tiers) as $tier_id) {
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
+                    <p style="margin: 5px 0; font-size: 13px;"><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
                 </div>
                 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
@@ -292,6 +296,19 @@ foreach (array_keys($all_tiers) as $tier_id) {
                     <td>
                         <input type="number" name="coupon_discount" id="coupon_discount" class="regular-text" step="0.01" min="0" value="5">
                         <p class="description">Discount amount customer receives when using affiliate coupon</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="allow_code_edit">Allow Code Editing</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="allow_code_edit" id="allow_code_edit" value="1">
+                            Allow affiliates to edit their code once per month
+                        </label>
+                        <p class="description">If enabled, affiliates in this tier can change their promotional code once every 30 days</p>
                     </td>
                 </tr>
             </table>
