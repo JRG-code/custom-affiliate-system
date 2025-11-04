@@ -43,6 +43,8 @@ define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Include functions
 require_once CAS_PLUGIN_DIR . 'includes/helpers.php';
 require_once CAS_PLUGIN_DIR . 'includes/pro-license.php';
+require_once CAS_PLUGIN_DIR . 'includes/fraud-detection.php';
+require_once CAS_PLUGIN_DIR . 'includes/scheduled-payments.php';
 
 class Custom_Affiliate_System {
     
@@ -78,10 +80,20 @@ class Custom_Affiliate_System {
         $this->create_tables();
         $this->create_pages();
         cas_init_default_settings();
+
+        // Schedule automatic payouts
+        cas_schedule_automatic_payouts();
+
         flush_rewrite_rules();
     }
-    
+
     public function deactivate() {
+        // Clear scheduled payouts
+        $timestamp = wp_next_scheduled('cas_process_automatic_payouts');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'cas_process_automatic_payouts');
+        }
+
         flush_rewrite_rules();
     }
     
@@ -179,7 +191,14 @@ class Custom_Affiliate_System {
 
         // Scheduled email hook (10-second delay)
         add_action('cas_send_welcome_email', array($this, 'send_welcome_email_scheduled'), 10, 2);
-        
+
+        // Fraud detection hooks
+        add_action('user_register', 'cas_store_registration_ip', 10, 1);
+        add_action('woocommerce_created_customer', 'cas_store_registration_ip', 10, 1);
+
+        // Scheduled payments hook
+        add_action('cas_process_automatic_payouts', 'cas_process_automatic_payouts');
+
         // WooCommerce My Account customization
         add_action('init', array($this, 'add_my_account_endpoints'));
         add_filter('woocommerce_account_menu_items', array($this, 'custom_my_account_menu'), 999);
@@ -335,6 +354,17 @@ class Custom_Affiliate_System {
             return; // Affiliate already exists
         }
 
+        // FRAUD DETECTION: Check for duplicate accounts
+        $duplicates = cas_detect_duplicate_accounts($user_id);
+        if (!empty($duplicates)) {
+            // Log but don't block - admin will review
+            cas_log_fraud_attempt($user_id, 'duplicate_account', array(
+                'severity' => 'medium',
+                'duplicates_found' => count($duplicates),
+                'details' => $duplicates
+            ));
+        }
+
         $user = get_userdata($user_id);
         $username = $user->user_login;
 
@@ -458,29 +488,35 @@ class Custom_Affiliate_System {
     
     public function track_commission($order_id) {
         global $wpdb;
-        
+
         $order = wc_get_order($order_id);
         if (!$order) return;
-        
+
         $coupons = $order->get_coupon_codes();
-        
+
         if (empty($coupons)) {
             return;
         }
-        
+
         foreach ($coupons as $coupon_code) {
             $coupon = new WC_Coupon($coupon_code);
             $affiliate_user_id = get_post_meta($coupon->get_id(), '_affiliate_user_id', true);
-            
+
             if (!$affiliate_user_id) {
                 continue;
             }
-            
+
+            // FRAUD DETECTION: Check for self-referral
+            if (cas_is_self_referral($order_id, $affiliate_user_id)) {
+                // Block the commission - self-referral not allowed!
+                continue;
+            }
+
             $affiliate = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d AND status = 'active'",
                 $affiliate_user_id
             ));
-            
+
             if (!$affiliate) {
                 continue;
             }
