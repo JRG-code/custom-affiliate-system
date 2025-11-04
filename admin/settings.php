@@ -29,6 +29,11 @@ function cas_register_settings_immediate() {
     add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
     
+    // Automatic Payouts Section
+    add_settings_section('cas_payouts_section', '💰 Automatic Payouts', 'cas_payouts_section_callback', 'cas-settings');
+    add_settings_field('auto_payouts_enabled', 'Enable Automatic Payouts', 'cas_auto_payouts_enabled_field_callback', 'cas-settings', 'cas_payouts_section');
+    add_settings_field('payout_schedule', 'Payout Schedule', 'cas_payout_schedule_field_callback', 'cas-settings', 'cas_payouts_section');
+
     // Debug Section
     add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
     add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
@@ -63,6 +68,19 @@ function cas_license_key_field_callback() {
 // Section callbacks
 function cas_general_section_callback() {
     echo '<p>General system-wide settings for your affiliate program.</p>';
+}
+
+function cas_payouts_section_callback() {
+    echo '<p>Automate payout processing using WordPress Cron (100% free, no paid services required!).</p>';
+
+    // Show next scheduled payout
+    $next_run = wp_next_scheduled('cas_process_automatic_payouts');
+    if ($next_run) {
+        $next_date = date('F j, Y \a\t g:i A', $next_run);
+        echo '<div style="background: #e0f2fe; border-left: 4px solid #0284c7; padding: 15px; margin: 15px 0; border-radius: 4px;">';
+        echo '<p style="margin: 0;"><strong>ℹ️ Next Scheduled Run:</strong> ' . $next_date . '</p>';
+        echo '</div>';
+    }
 }
 
 function cas_debug_section_callback() {
@@ -141,6 +159,34 @@ function cas_terms_page_field_callback() {
     <?php
 }
 
+function cas_auto_payouts_enabled_field_callback() {
+    $options = get_option('cas_settings', array());
+    $value = isset($options['general']['auto_payouts_enabled']) ? $options['general']['auto_payouts_enabled'] : 0;
+    ?>
+    <label>
+        <input type="checkbox" name="cas_settings[general][auto_payouts_enabled]" value="1" <?php checked($value, 1); ?>>
+        Automatically process approved payouts on schedule
+    </label>
+    <p class="description">When enabled, all "approved" payouts will be automatically marked as "paid" on the schedule below.</p>
+    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 10px 0; border-radius: 4px;">
+        <p style="margin: 0; font-size: 13px;"><strong>⚠️ Important:</strong> You still need to manually approve payouts. This only automates the processing of already-approved requests on the selected schedule.</p>
+    </div>
+    <?php
+}
+
+function cas_payout_schedule_field_callback() {
+    $options = get_option('cas_settings', array());
+    $value = isset($options['general']['payout_schedule']) ? $options['general']['payout_schedule'] : 'monthly';
+    ?>
+    <select name="cas_settings[general][payout_schedule]" class="regular-text">
+        <option value="weekly" <?php selected($value, 'weekly'); ?>>Weekly (Every 7 days)</option>
+        <option value="biweekly" <?php selected($value, 'biweekly'); ?>>Twice Monthly (Every 14 days)</option>
+        <option value="monthly" <?php selected($value, 'monthly'); ?>>Monthly (Every 30 days)</option>
+    </select>
+    <p class="description">How often should automatic payouts be processed?</p>
+    <?php
+}
+
 function cas_debug_enabled_field_callback() {
     $value = get_option('cas_debug_enabled', false);
     ?>
@@ -164,7 +210,16 @@ function cas_sanitize_settings($input) {
         $sanitized['general']['auto_approve'] = isset($input['general']['auto_approve']) ? 1 : 0;
         $sanitized['general']['send_welcome_email'] = isset($input['general']['send_welcome_email']) ? 1 : 0;
         $sanitized['general']['terms_page'] = intval($input['general']['terms_page']);
+        $sanitized['general']['auto_payouts_enabled'] = isset($input['general']['auto_payouts_enabled']) ? 1 : 0;
+        $sanitized['general']['payout_schedule'] = sanitize_text_field($input['general']['payout_schedule'] ?? 'monthly');
     }
+
+    // Reschedule automatic payouts if settings changed
+    $timestamp = wp_next_scheduled('cas_process_automatic_payouts');
+    if ($timestamp) {
+        wp_unschedule_event($timestamp, 'cas_process_automatic_payouts');
+    }
+    cas_schedule_automatic_payouts();
 
     add_settings_error('cas_settings', 'cas_settings_updated', '✅ Settings saved successfully!', 'success');
 

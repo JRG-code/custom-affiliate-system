@@ -25,6 +25,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
         $payment_days = intval($_POST['payment_days']);
         $coupon_discount = floatval($_POST['coupon_discount']);
         $allow_code_edit = isset($_POST['allow_code_edit']) ? 1 : 0;
+        $allow_self_referral = isset($_POST['allow_self_referral']) ? 1 : 0;
         
         $errors = array();
         
@@ -64,6 +65,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'payment_days' => $payment_days,
                 'coupon_discount' => $coupon_discount,
                 'allow_code_edit' => $allow_code_edit,
+                'allow_self_referral' => $allow_self_referral,
                 'created_at' => current_time('mysql')
             );
             
@@ -82,7 +84,8 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'min_payout' => $min_payout,
                 'payment_days' => $payment_days,
                 'coupon_discount' => $coupon_discount,
-                'allow_code_edit' => $allow_code_edit
+                'allow_code_edit' => $allow_code_edit,
+                'allow_self_referral' => $allow_self_referral
             );
             update_option('cas_settings', $cas_settings);
             
@@ -190,6 +193,7 @@ foreach (array_keys($all_tiers) as $tier_id) {
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
                     <p style="margin: 5px 0; font-size: 13px;"><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
+                    <p style="margin: 5px 0; font-size: 13px;"><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
                 </div>
                 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
@@ -309,6 +313,19 @@ foreach (array_keys($all_tiers) as $tier_id) {
                             Allow affiliates to edit their code once per month
                         </label>
                         <p class="description">If enabled, affiliates in this tier can change their promotional code once every 30 days</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="allow_self_referral">Allow Self-Referral</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="allow_self_referral" id="allow_self_referral" value="1">
+                            Allow affiliates to earn commission on their own purchases
+                        </label>
+                        <p class="description">If enabled, affiliates in this tier can use their own code when purchasing and still earn commission</p>
                     </td>
                 </tr>
             </table>
