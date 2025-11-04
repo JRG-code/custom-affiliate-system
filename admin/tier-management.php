@@ -361,8 +361,17 @@ foreach (array_keys($all_tiers) as $tier_id) {
                         <label for="edit_tier_name">Tier Name *</label>
                     </th>
                     <td>
-                        <input type="text" name="tier_name" id="edit_tier_name" class="regular-text" required value="<?php echo esc_attr($editing_tier['name']); ?>">
-                        <p class="description">Display name shown to users</p>
+                        <?php if (cas_is_pro_active()): ?>
+                            <input type="text" name="tier_name" id="edit_tier_name" class="regular-text" required value="<?php echo esc_attr($editing_tier['name']); ?>">
+                            <p class="description">Display name shown to users</p>
+                        <?php else: ?>
+                            <input type="text" value="<?php echo esc_attr($editing_tier['name']); ?>" class="regular-text" disabled>
+                            <input type="hidden" name="tier_name" value="<?php echo esc_attr($editing_tier['name']); ?>">
+                            <p class="description">
+                                <span style="color: #f59e0b;">⭐ PRO Feature:</span> Upgrade to Pro to customize tier names.
+                                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="font-weight: 600;">Upgrade Now →</a>
+                            </p>
+                        <?php endif; ?>
                     </td>
                 </tr>
 

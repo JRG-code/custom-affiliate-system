@@ -25,6 +25,7 @@ function cas_register_settings_immediate() {
     add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('auto_create_affiliate', 'Auto-Create Affiliates', 'cas_auto_create_affiliate_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('default_tier', 'Default Tier', 'cas_default_tier_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
@@ -115,6 +116,23 @@ function cas_auto_create_affiliate_field_callback() {
         Automatically create affiliate account when user registers
     </label>
     <p class="description">When enabled, every new user becomes an affiliate automatically</p>
+    <?php
+}
+
+function cas_default_tier_field_callback() {
+    $options = get_option('cas_settings', array());
+    $value = isset($options['general']['default_tier']) ? $options['general']['default_tier'] : 'tier_1';
+
+    $all_tiers = cas_get_available_tiers();
+    ?>
+    <select name="cas_settings[general][default_tier]" class="regular-text">
+        <?php foreach ($all_tiers as $tier_id => $tier_info): ?>
+            <option value="<?php echo esc_attr($tier_id); ?>" <?php selected($value, $tier_id); ?>>
+                <?php echo esc_html($tier_info['name']); ?> - <?php echo cas_get_tier_setting($tier_id, 'commission'); ?>% Commission
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <p class="description">Which tier should new affiliates be assigned to by default?</p>
     <?php
 }
 
