@@ -99,7 +99,7 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
             echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" updated successfully!</p></div>';
 
             // Clear the edit parameter
-            echo '<script>window.history.replaceState({}, document.title, window.location.pathname + "?page=cas-tier-management");</script>';
+            echo '<script>window.history.replaceState({}, document.title, window.location.pathname + "?page=affiliate-tiers");</script>';
         } else {
             echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
             foreach ($errors as $error) {
@@ -301,7 +301,7 @@ foreach (array_keys($all_tiers) as $tier_id) {
                 </div>
 
                 <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <a href="?page=cas-tier-management&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">
+                    <a href="?page=affiliate-tiers&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">
                         ⚙️ Edit
                     </a>
 
@@ -338,7 +338,7 @@ foreach (array_keys($all_tiers) as $tier_id) {
     <div id="editTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">⚙️ Edit Tier: <?php echo esc_html($editing_tier['name']); ?></h2>
-            <a href="?page=cas-tier-management" class="button">✕ Cancel</a>
+            <a href="?page=affiliate-tiers" class="button">✕ Cancel</a>
         </div>
 
         <form method="post" action="">
@@ -451,7 +451,7 @@ foreach (array_keys($all_tiers) as $tier_id) {
                 <button type="submit" name="edit_tier" class="button button-primary button-large">
                     💾 Save Changes
                 </button>
-                <a href="?page=cas-tier-management" class="button button-large" style="margin-left: 10px;">Cancel</a>
+                <a href="?page=affiliate-tiers" class="button button-large" style="margin-left: 10px;">Cancel</a>
             </p>
         </form>
     </div>
