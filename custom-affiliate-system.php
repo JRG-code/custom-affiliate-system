@@ -155,10 +155,28 @@ class Custom_Affiliate_System {
             KEY affiliate_id (affiliate_id),
             KEY status (status)
         ) $charset_collate;";
-        
+
+        // Code Change Requests table
+        $sql4 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}affiliate_code_changes (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            affiliate_id bigint(20) NOT NULL,
+            old_code varchar(50) NOT NULL,
+            new_code varchar(50) NOT NULL,
+            reason text NOT NULL,
+            status varchar(20) DEFAULT 'pending',
+            requested_at datetime DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at datetime NULL,
+            reviewed_by bigint(20) NULL,
+            admin_notes text NULL,
+            PRIMARY KEY (id),
+            KEY affiliate_id (affiliate_id),
+            KEY status (status)
+        ) $charset_collate;";
+
         dbDelta($sql1);
         dbDelta($sql2);
         dbDelta($sql3);
+        dbDelta($sql4);
     }
     
     private function create_pages() {
@@ -191,6 +209,7 @@ class Custom_Affiliate_System {
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_notices', array($this, 'admin_notices'));
         add_action('wp_ajax_request_affiliate_payout', array($this, 'handle_payout_request'));
+        add_action('wp_ajax_request_code_change', array($this, 'handle_code_change_request'));
         add_action('wp_ajax_toggle_affiliate_status', array($this, 'toggle_status_ajax'));
         add_action('wp_ajax_export_affiliate_data', array($this, 'export_data'));
 
@@ -801,7 +820,127 @@ class Custom_Affiliate_System {
         
         wp_send_json_success('Request sent successfully! You will receive a response soon.');
     }
-    
+
+    public function handle_code_change_request() {
+        global $wpdb;
+
+        $user_id = get_current_user_id();
+        if (!$user_id) {
+            wp_send_json_error('Not authenticated');
+        }
+
+        $affiliate = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
+            $user_id
+        ));
+
+        if (!$affiliate) {
+            wp_send_json_error('Affiliate not found');
+        }
+
+        // Check if tier allows code changes
+        $can_edit_code = cas_get_tier_setting($affiliate->tier, 'allow_code_edit');
+        if (!$can_edit_code) {
+            wp_send_json_error('Your tier does not allow code changes');
+        }
+
+        // Check for pending request
+        $pending = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_code_changes
+            WHERE affiliate_id = %d AND status = 'pending'",
+            $affiliate->id
+        ));
+
+        if ($pending > 0) {
+            wp_send_json_error('You already have a pending code change request');
+        }
+
+        // Check 30-day limit
+        $last_change = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
+            WHERE affiliate_id = %d AND status = 'approved'
+            ORDER BY requested_at DESC LIMIT 1",
+            $affiliate->id
+        ));
+
+        if ($last_change) {
+            $days_since_change = floor((time() - strtotime($last_change->requested_at)) / 86400);
+            if ($days_since_change < 30) {
+                $days_remaining = 30 - $days_since_change;
+                wp_send_json_error("You can request a code change again in {$days_remaining} days");
+            }
+        }
+
+        $new_code = strtoupper(sanitize_text_field($_POST['new_code']));
+        $reason = sanitize_textarea_field($_POST['reason']);
+
+        // Validate new code
+        if (empty($new_code) || strlen($new_code) < 5 || strlen($new_code) > 15) {
+            wp_send_json_error('Code must be between 5-15 characters');
+        }
+
+        if (!preg_match('/^[A-Z0-9]+$/', $new_code)) {
+            wp_send_json_error('Code must contain only uppercase letters and numbers');
+        }
+
+        // Check if code is already in use
+        $code_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}affiliates WHERE affiliate_code = %s",
+            $new_code
+        ));
+
+        if ($code_exists > 0) {
+            wp_send_json_error('This code is already in use. Please choose another one');
+        }
+
+        // Insert request
+        $wpdb->insert(
+            $wpdb->prefix . 'affiliate_code_changes',
+            array(
+                'affiliate_id' => $affiliate->id,
+                'old_code' => $affiliate->affiliate_code,
+                'new_code' => $new_code,
+                'reason' => $reason,
+                'status' => 'pending'
+            ),
+            array('%d', '%s', '%s', '%s', '%s')
+        );
+
+        // Notify admin
+        $user = get_userdata($user_id);
+        $admin_email = cas_get_support_email();
+
+        $subject = 'Code Change Request - ' . $user->display_name;
+        $message = "
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+        <h2>Code Change Request</h2>
+
+        <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <p style='margin: 5px 0;'><strong>Affiliate:</strong> {$user->display_name}</p>
+            <p style='margin: 5px 0;'><strong>Email:</strong> {$user->user_email}</p>
+            <p style='margin: 5px 0;'><strong>Current Code:</strong> {$affiliate->affiliate_code}</p>
+            <p style='margin: 5px 0;'><strong>Requested Code:</strong> {$new_code}</p>
+        </div>
+
+        <div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <p style='margin: 0 0 10px 0;'><strong>Reason:</strong></p>
+            <p style='margin: 0; background: white; padding: 10px; border-radius: 4px;'>{$reason}</p>
+        </div>
+
+        <p style='margin: 30px 0;'>
+            <a href='" . admin_url('admin.php?page=affiliate-code-changes') . "' style='background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Review Request</a>
+        </p>
+        </body>
+        </html>
+        ";
+
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($admin_email, $subject, $message, $headers);
+
+        wp_send_json_success('Request submitted successfully! An administrator will review it shortly.');
+    }
+
     // === REGISTRATION FORM ===
     
     public function registration_shortcode() {
@@ -998,6 +1137,15 @@ class Custom_Affiliate_System {
 
     add_submenu_page(
         'affiliate-system',
+        'Code Change Requests',
+        'Code Change Requests',
+        'manage_options',
+        'affiliate-code-changes',
+        array($this, 'admin_code_changes_page')
+    );
+
+    add_submenu_page(
+        'affiliate-system',
         'Settings',
         'Settings',
         'manage_options',
@@ -1070,7 +1218,14 @@ class Custom_Affiliate_System {
             include $file;
         }
     }
-    
+
+    public function admin_code_changes_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/code-changes.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
     public function admin_settings_page() {
         $file = CAS_PLUGIN_DIR . 'admin/settings.php';
         if (file_exists($file)) {
