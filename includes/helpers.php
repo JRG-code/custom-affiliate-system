@@ -85,7 +85,7 @@ function cas_get_general_setting($field) {
 
 /**
  * Obter todas as configurações de um tier
- * 
+ *
  * @param string $tier Nome do tier
  * @return array Array com todas as configurações
  */
@@ -94,7 +94,9 @@ function cas_get_all_tier_settings($tier) {
         'commission' => cas_get_tier_setting($tier, 'commission'),
         'min_payout' => cas_get_tier_setting($tier, 'min_payout'),
         'payment_days' => cas_get_tier_setting($tier, 'payment_days'),
-        'coupon_discount' => cas_get_tier_setting($tier, 'coupon_discount')
+        'coupon_discount' => cas_get_tier_setting($tier, 'coupon_discount'),
+        'allow_code_edit' => cas_get_tier_setting($tier, 'allow_code_edit'),
+        'allow_self_referral' => cas_get_tier_setting($tier, 'allow_self_referral')
     );
 }
 

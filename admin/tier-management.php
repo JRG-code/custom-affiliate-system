@@ -14,6 +14,33 @@ if (!cas_is_pro_active()) {
 
 global $wpdb;
 
+// Display success message from transient (after save)
+if (isset($_GET['saved']) && $_GET['saved'] == '1') {
+    $saved_tier = get_transient('cas_tier_saved');
+    if ($saved_tier) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($saved_tier) . '" has been updated successfully.</p></div>';
+        delete_transient('cas_tier_saved');
+    }
+}
+
+// Display success message from transient (after create)
+if (isset($_GET['created']) && $_GET['created'] == '1') {
+    $created_tier = get_transient('cas_tier_created');
+    if ($created_tier) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($created_tier) . '" has been created successfully.</p></div>';
+        delete_transient('cas_tier_created');
+    }
+}
+
+// Display success message from transient (after delete)
+if (isset($_GET['deleted']) && $_GET['deleted'] == '1') {
+    $deleted_tier = get_transient('cas_tier_deleted');
+    if ($deleted_tier) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($deleted_tier) . '" has been deleted successfully.</p></div>';
+        delete_transient('cas_tier_deleted');
+    }
+}
+
 // Handle Edit Tier
 if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
     try {
@@ -96,10 +123,12 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
                 }
             }
 
-            echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" updated successfully!</p></div>';
+            // Set transient for success message (survives redirect)
+            set_transient('cas_tier_saved', $tier_name, 10);
 
-            // Clear the edit parameter
-            echo '<script>window.history.replaceState({}, document.title, window.location.pathname + "?page=affiliate-tiers");</script>';
+            // Redirect to clear form and show success message
+            wp_redirect(add_query_arg(array('page' => 'affiliate-tiers', 'saved' => '1'), admin_url('admin.php')));
+            exit;
         } else {
             echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
             foreach ($errors as $error) {
@@ -186,8 +215,13 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'allow_self_referral' => $allow_self_referral
             );
             update_option('cas_settings', $cas_settings);
-            
-            echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" created successfully!</p></div>';
+
+            // Set transient for success message (survives redirect)
+            set_transient('cas_tier_created', $tier_name, 10);
+
+            // Redirect to clear form and show success message
+            wp_redirect(add_query_arg(array('page' => 'affiliate-tiers', 'created' => '1'), admin_url('admin.php')));
+            exit;
         } else {
             echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
             foreach ($errors as $error) {
@@ -232,8 +266,13 @@ if (isset($_POST['delete_tier']) && check_admin_referer('cas_delete_tier')) {
                         unset($cas_settings[$tier_id]);
                         update_option('cas_settings', $cas_settings);
                     }
-                    
-                    echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($deleted_name) . '" deleted successfully!</p></div>';
+
+                    // Set transient for success message (survives redirect)
+                    set_transient('cas_tier_deleted', $deleted_name, 10);
+
+                    // Redirect to show success message
+                    wp_redirect(add_query_arg(array('page' => 'affiliate-tiers', 'deleted' => '1'), admin_url('admin.php')));
+                    exit;
                 } else {
                     echo '<div class="notice notice-error is-dismissible"><p>❌ Tier not found.</p></div>';
                 }
