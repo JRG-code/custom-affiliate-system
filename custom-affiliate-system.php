@@ -1110,29 +1110,11 @@ class Custom_Affiliate_System {
 
     add_submenu_page(
         'affiliate-system',
-        'Payouts',
-        'Payouts',
-        'manage_options',
-        'affiliate-payouts',
-        array($this, 'admin_payouts_page')
-    );
-    
-    add_submenu_page(
-        'affiliate-system',
         'Reports',
         'Reports',
         'manage_options',
         'affiliate-reports',
         array($this, 'admin_reports_page')
-    );
-
-    add_submenu_page(
-        'affiliate-system',
-        'Code Change Requests',
-        'Code Change Requests',
-        'manage_options',
-        'affiliate-code-changes',
-        array($this, 'admin_code_changes_page')
     );
 
     add_submenu_page(
