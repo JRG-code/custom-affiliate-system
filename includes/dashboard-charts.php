@@ -34,6 +34,8 @@ function cas_render_analytics_dashboard($affiliate_id) {
     $revenue = array();
     $commissions = array();
 
+    $has_data = !empty($monthly_data);
+
     foreach ($monthly_data as $data) {
         $months[] = date('M Y', strtotime($data->month . '-01'));
         $sales_counts[] = intval($data->sales_count);
@@ -82,25 +84,39 @@ function cas_render_analytics_dashboard($affiliate_id) {
     <div class="cas-analytics-dashboard">
         <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700;">📊 Performance Analytics</h2>
 
+        <?php if (!$has_data): ?>
+        <!-- No Data Message -->
+        <div class="cas-no-data-message">
+            <div class="cas-no-data-icon">📊</div>
+            <h3>No data yet</h3>
+            <p>Start generating sales to see your performance analytics here!</p>
+        </div>
+        <?php else: ?>
         <!-- Charts Grid -->
         <div class="cas-charts-grid">
 
             <!-- Monthly Performance Chart -->
             <div class="cas-chart-card cas-chart-large">
                 <h3 class="cas-chart-title">Monthly Performance (Last 12 Months)</h3>
-                <canvas id="casMonthlyChart" height="80"></canvas>
+                <div class="cas-chart-container" style="height: 300px;">
+                    <canvas id="casMonthlyChart"></canvas>
+                </div>
             </div>
 
             <!-- Revenue vs Commission -->
             <div class="cas-chart-card">
                 <h3 class="cas-chart-title">Revenue vs Commission</h3>
-                <canvas id="casRevenueChart" height="100"></canvas>
+                <div class="cas-chart-container" style="height: 250px;">
+                    <canvas id="casRevenueChart"></canvas>
+                </div>
             </div>
 
             <!-- Days of Week Performance -->
             <div class="cas-chart-card">
                 <h3 class="cas-chart-title">Best Days of the Week</h3>
-                <canvas id="casDaysChart" height="100"></canvas>
+                <div class="cas-chart-container" style="height: 250px;">
+                    <canvas id="casDaysChart"></canvas>
+                </div>
             </div>
 
             <!-- Conversion Rate Gauge -->
@@ -110,10 +126,13 @@ function cas_render_analytics_dashboard($affiliate_id) {
                     <div class="cas-gauge-value"><?php echo $conversion_rate; ?>%</div>
                     <div class="cas-gauge-label"><?php echo $conversion_stats->completed_orders; ?> of <?php echo $conversion_stats->total_orders; ?> completed</div>
                 </div>
-                <canvas id="casConversionGauge" height="100"></canvas>
+                <div class="cas-chart-container" style="height: 200px;">
+                    <canvas id="casConversionGauge"></canvas>
+                </div>
             </div>
 
         </div>
+        <?php endif; ?>
     </div>
 
     <style>
@@ -123,6 +142,32 @@ function cas_render_analytics_dashboard($affiliate_id) {
         padding: 30px;
         margin: 30px 0;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .cas-no-data-message {
+        text-align: center;
+        padding: 60px 20px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 2px dashed #e5e7eb;
+    }
+
+    .cas-no-data-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .cas-no-data-message h3 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+        color: #6b7280;
+    }
+
+    .cas-no-data-message p {
+        margin: 0;
+        color: #9ca3af;
+        font-size: 14px;
     }
 
     .cas-charts-grid {
@@ -153,6 +198,16 @@ function cas_render_analytics_dashboard($affiliate_id) {
         font-size: 16px;
         font-weight: 600;
         color: #374151;
+    }
+
+    .cas-chart-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .cas-chart-container canvas {
+        display: block;
+        width: 100% !important;
     }
 
     .cas-gauge-card {
@@ -190,6 +245,7 @@ function cas_render_analytics_dashboard($affiliate_id) {
     }
     </style>
 
+    <?php if ($has_data): ?>
     <script>
     // Chart.js global configuration
     Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -370,5 +426,6 @@ function cas_render_analytics_dashboard($affiliate_id) {
         }
     });
     </script>
+    <?php endif; ?>
     <?php
 }

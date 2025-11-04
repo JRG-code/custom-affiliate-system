@@ -14,6 +14,104 @@ if (!cas_is_pro_active()) {
 
 global $wpdb;
 
+// Handle Edit Tier
+if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
+    try {
+        $tier_id = sanitize_key($_POST['tier_id']); // This is the tier being edited (read-only)
+        $tier_name = sanitize_text_field($_POST['tier_name']);
+        $tier_badge = !empty($_POST['tier_badge']) ? sanitize_text_field($_POST['tier_badge']) : '⭐';
+        $commission = floatval($_POST['commission']);
+        $min_payout = floatval($_POST['min_payout']);
+        $payment_days = intval($_POST['payment_days']);
+        $coupon_discount = floatval($_POST['coupon_discount']);
+        $allow_code_edit = isset($_POST['allow_code_edit']) ? 1 : 0;
+        $allow_self_referral = isset($_POST['allow_self_referral']) ? 1 : 0;
+
+        $errors = array();
+
+        // Validation
+        if (empty($tier_name)) {
+            $errors[] = 'Tier name is required';
+        }
+
+        if ($commission < 0 || $commission > 100) {
+            $errors[] = 'Commission must be between 0-100%';
+        }
+
+        if (empty($errors)) {
+            // Check if it's a default tier or custom tier
+            $default_tiers = array('tier_1', 'tier_2', 'ambassador');
+            $is_default = in_array($tier_id, $default_tiers);
+
+            if ($is_default) {
+                // Update default tier settings in cas_settings
+                $cas_settings = get_option('cas_settings', array());
+                if (!is_array($cas_settings)) {
+                    $cas_settings = array();
+                }
+
+                $cas_settings[$tier_id] = array(
+                    'commission' => $commission,
+                    'min_payout' => $min_payout,
+                    'payment_days' => $payment_days,
+                    'coupon_discount' => $coupon_discount,
+                    'allow_code_edit' => $allow_code_edit,
+                    'allow_self_referral' => $allow_self_referral
+                );
+                update_option('cas_settings', $cas_settings);
+
+            } else {
+                // Update custom tier
+                $custom_tiers = get_option('cas_custom_tiers', array());
+
+                if (isset($custom_tiers[$tier_id])) {
+                    $custom_tiers[$tier_id] = array(
+                        'name' => $tier_name,
+                        'badge' => $tier_badge,
+                        'commission' => $commission,
+                        'min_payout' => $min_payout,
+                        'payment_days' => $payment_days,
+                        'coupon_discount' => $coupon_discount,
+                        'allow_code_edit' => $allow_code_edit,
+                        'allow_self_referral' => $allow_self_referral,
+                        'created_at' => $custom_tiers[$tier_id]['created_at'] ?? current_time('mysql')
+                    );
+                    update_option('cas_custom_tiers', $custom_tiers);
+
+                    // Also update cas_settings
+                    $cas_settings = get_option('cas_settings', array());
+                    if (!is_array($cas_settings)) {
+                        $cas_settings = array();
+                    }
+
+                    $cas_settings[$tier_id] = array(
+                        'commission' => $commission,
+                        'min_payout' => $min_payout,
+                        'payment_days' => $payment_days,
+                        'coupon_discount' => $coupon_discount,
+                        'allow_code_edit' => $allow_code_edit,
+                        'allow_self_referral' => $allow_self_referral
+                    );
+                    update_option('cas_settings', $cas_settings);
+                }
+            }
+
+            echo '<div class="notice notice-success is-dismissible"><p>✅ Tier "' . esc_html($tier_name) . '" updated successfully!</p></div>';
+
+            // Clear the edit parameter
+            echo '<script>window.history.replaceState({}, document.title, window.location.pathname + "?page=cas-tier-management");</script>';
+        } else {
+            echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Errors:</strong></p><ul>';
+            foreach ($errors as $error) {
+                echo '<li>' . esc_html($error) . '</li>';
+            }
+            echo '</ul></div>';
+        }
+    } catch (Exception $e) {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Error updating tier:</strong> ' . esc_html($e->getMessage()) . '</p></div>';
+    }
+}
+
 // Handle Create New Tier
 if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
     try {
@@ -201,18 +299,22 @@ foreach (array_keys($all_tiers) as $tier_id) {
                         <strong><?php echo $usage; ?></strong> affiliate<?php echo $usage != 1 ? 's' : ''; ?> using this tier
                     </p>
                 </div>
-                
-                <?php if (!$is_default): ?>
-                <div style="margin-top: 15px;">
-                    <form method="post" style="display: inline;" onsubmit="return confirm('Delete this tier? This cannot be undone.');">
+
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <a href="?page=cas-tier-management&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">
+                        ⚙️ Edit
+                    </a>
+
+                    <?php if (!$is_default): ?>
+                    <form method="post" style="flex: 1; margin: 0;" onsubmit="return confirm('Delete this tier? This cannot be undone.');">
                         <?php wp_nonce_field('cas_delete_tier'); ?>
                         <input type="hidden" name="tier_id" value="<?php echo esc_attr($tier_id); ?>">
                         <button type="submit" name="delete_tier" class="button" style="width: 100%;">
-                            🗑️ Delete Tier
+                            🗑️ Delete
                         </button>
                     </form>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
             <?php endforeach; ?>
             
@@ -225,6 +327,136 @@ foreach (array_keys($all_tiers) as $tier_id) {
         </div>
     </div>
     
+    <!-- Edit Tier Form -->
+    <?php
+    $editing_tier_id = isset($_GET['edit_tier']) ? sanitize_key($_GET['edit_tier']) : '';
+    if (!empty($editing_tier_id) && isset($all_tiers[$editing_tier_id])):
+        $editing_tier = $all_tiers[$editing_tier_id];
+        $editing_settings = cas_get_all_tier_settings($editing_tier_id);
+        $is_default_tier = in_array($editing_tier_id, array('tier_1', 'tier_2', 'ambassador'));
+    ?>
+    <div id="editTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">⚙️ Edit Tier: <?php echo esc_html($editing_tier['name']); ?></h2>
+            <a href="?page=cas-tier-management" class="button">✕ Cancel</a>
+        </div>
+
+        <form method="post" action="">
+            <?php wp_nonce_field('cas_edit_tier'); ?>
+            <input type="hidden" name="tier_id" value="<?php echo esc_attr($editing_tier_id); ?>">
+
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label>Tier ID</label>
+                    </th>
+                    <td>
+                        <input type="text" class="regular-text" value="<?php echo esc_attr($editing_tier_id); ?>" disabled>
+                        <p class="description">Tier ID cannot be changed after creation</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_tier_name">Tier Name *</label>
+                    </th>
+                    <td>
+                        <input type="text" name="tier_name" id="edit_tier_name" class="regular-text" required value="<?php echo esc_attr($editing_tier['name']); ?>">
+                        <p class="description">Display name shown to users</p>
+                    </td>
+                </tr>
+
+                <?php if (!$is_default_tier): ?>
+                <tr>
+                    <th scope="row">
+                        <label for="edit_tier_badge">Badge/Emoji</label>
+                    </th>
+                    <td>
+                        <input type="text" name="tier_badge" id="edit_tier_badge" class="small-text" value="<?php echo esc_attr($editing_tier['badge']); ?>" maxlength="5">
+                        <p class="description">Emoji or icon to represent this tier</p>
+                    </td>
+                </tr>
+                <?php else: ?>
+                <input type="hidden" name="tier_badge" value="<?php echo esc_attr($editing_tier['badge']); ?>">
+                <?php endif; ?>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_commission">Commission Rate (%) *</label>
+                    </th>
+                    <td>
+                        <input type="number" name="commission" id="edit_commission" class="regular-text" required step="0.01" min="0" max="100" value="<?php echo esc_attr($editing_settings['commission']); ?>">
+                        <p class="description">Percentage commission on sales (0-100%)</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_min_payout">Minimum Payout (€)</label>
+                    </th>
+                    <td>
+                        <input type="number" name="min_payout" id="edit_min_payout" class="regular-text" step="1" min="0" value="<?php echo esc_attr($editing_settings['min_payout']); ?>">
+                        <p class="description">Minimum amount required to request payout (0 = no minimum)</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_payment_days">Payment Timeline (days)</label>
+                    </th>
+                    <td>
+                        <input type="number" name="payment_days" id="edit_payment_days" class="regular-text" step="1" min="1" value="<?php echo esc_attr($editing_settings['payment_days']); ?>">
+                        <p class="description">Number of days to process payment after approval</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_coupon_discount">Coupon Discount (€)</label>
+                    </th>
+                    <td>
+                        <input type="number" name="coupon_discount" id="edit_coupon_discount" class="regular-text" step="0.01" min="0" value="<?php echo esc_attr($editing_settings['coupon_discount']); ?>">
+                        <p class="description">Discount amount customer receives when using affiliate coupon</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_allow_code_edit">Allow Code Editing</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="allow_code_edit" id="edit_allow_code_edit" value="1" <?php checked(!empty($editing_settings['allow_code_edit'])); ?>>
+                            Allow affiliates to edit their code once per month
+                        </label>
+                        <p class="description">If enabled, affiliates in this tier can change their promotional code once every 30 days</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_allow_self_referral">Allow Self-Referral</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="allow_self_referral" id="edit_allow_self_referral" value="1" <?php checked(!empty($editing_settings['allow_self_referral'])); ?>>
+                            Allow affiliates to earn commission on their own purchases
+                        </label>
+                        <p class="description">If enabled, affiliates in this tier can use their own code when purchasing and still earn commission</p>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="submit">
+                <button type="submit" name="edit_tier" class="button button-primary button-large">
+                    💾 Save Changes
+                </button>
+                <a href="?page=cas-tier-management" class="button button-large" style="margin-left: 10px;">Cancel</a>
+            </p>
+        </form>
+    </div>
+    <?php endif; ?>
+
     <!-- Create New Tier Form -->
     <div id="createTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
         <h2>➕ Create New Tier</h2>

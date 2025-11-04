@@ -331,13 +331,27 @@ function cas_render_performance_mini_chart($affiliate_id) {
         }
     }
 
+    $has_mini_data = array_sum($commissions) > 0;
     ?>
     <div class="cas-mini-chart-widget">
         <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600;">📈 Last 7 Days</h3>
-        <canvas id="casMiniChart" height="120"></canvas>
+
+        <?php if (!$has_mini_data): ?>
+        <div class="cas-mini-no-data">
+            <div style="text-align: center; padding: 40px 20px; color: #9ca3af;">
+                <div style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">📊</div>
+                <p style="margin: 0; font-size: 14px;">No data yet</p>
+            </div>
+        </div>
+        <?php else: ?>
+        <div style="height: 200px; position: relative;">
+            <canvas id="casMiniChart"></canvas>
+        </div>
+        <?php endif; ?>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <?php if ($has_mini_data): ?>
     <script>
     const ctx = document.getElementById('casMiniChart');
     new Chart(ctx, {
@@ -401,5 +415,6 @@ function cas_render_performance_mini_chart($affiliate_id) {
         }
     });
     </script>
+    <?php endif; ?>
     <?php
 }

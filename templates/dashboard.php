@@ -52,6 +52,77 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 ?>
 
 <style>
+/* Horizontal WooCommerce Account Menu */
+.woocommerce-MyAccount-navigation {
+    width: 100% !important;
+    float: none !important;
+    margin-bottom: 30px !important;
+}
+
+.woocommerce-MyAccount-navigation ul {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    justify-content: center !important;
+}
+
+.woocommerce-MyAccount-navigation ul li {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+.woocommerce-MyAccount-navigation ul li a {
+    display: block !important;
+    padding: 12px 24px !important;
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+    border: 2px solid transparent !important;
+}
+
+.woocommerce-MyAccount-navigation ul li a:hover {
+    background: #e5e7eb !important;
+    color: #1f2937 !important;
+    transform: translateY(-2px) !important;
+}
+
+.woocommerce-MyAccount-navigation ul li.is-active a {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-color: #667eea !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+.woocommerce-MyAccount-content {
+    width: 100% !important;
+    float: none !important;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 768px) {
+    .woocommerce-MyAccount-navigation ul {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .woocommerce-MyAccount-navigation ul li {
+        width: 100% !important;
+    }
+
+    .woocommerce-MyAccount-navigation ul li a {
+        text-align: center !important;
+    }
+}
+
 /* Modern Affiliate Dashboard Styles */
 .affiliate-dashboard-modern {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
