@@ -735,6 +735,56 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
                 <button onclick="copyCode()" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: all 0.3s;">
                     Copy Code
                 </button>
+
+                <?php
+                // Check if user can edit code
+                $can_edit_code = cas_get_tier_setting($affiliate->tier, 'allow_code_edit');
+
+                // Check for pending code change request
+                $pending_request = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_code_changes
+                    WHERE affiliate_id = %d AND status = 'pending'",
+                    $affiliate->id
+                ));
+
+                // Check last code change (30-day limit)
+                $last_change = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
+                    WHERE affiliate_id = %d AND status = 'approved'
+                    ORDER BY requested_at DESC LIMIT 1",
+                    $affiliate->id
+                ));
+
+                $days_since_change = 999;
+                if ($last_change) {
+                    $days_since_change = floor((time() - strtotime($last_change->requested_at)) / 86400);
+                }
+
+                $can_request_change = $can_edit_code && !$pending_request && $days_since_change >= 30;
+                ?>
+
+                <?php if ($can_request_change): ?>
+                    <a href="<?php echo wc_get_account_endpoint_url('affiliate-dashboard'); ?>#codeChangeSection" style="display: inline-block; background: rgba(245, 158, 11, 0.3); border: 2px solid rgba(245, 158, 11, 0.6); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; margin-left: 10px; text-decoration: none; transition: all 0.3s;">
+                        Edit Code
+                    </a>
+                <?php else: ?>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.2); border: 2px solid rgba(239, 68, 68, 0.4); color: white; padding: 8px 16px; border-radius: 6px; margin-top: 10px; margin-left: 10px;">
+                        <span style="font-size: 18px;">⚠</span>
+                        <span style="font-size: 13px;">
+                            <?php
+                            if (!$can_edit_code) {
+                                echo 'Code editing not available';
+                            } elseif ($pending_request) {
+                                echo 'Request pending approval';
+                            } elseif ($days_since_change < 30) {
+                                $days_remaining = 30 - $days_since_change;
+                                echo "Available in {$days_remaining} days";
+                            }
+                            ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+
                 <div class="tier-badge-large <?php echo esc_attr($affiliate->tier); ?>">
                     <?php echo $tier_name; ?> - <?php echo $commission_rate; ?>% Commission
                 </div>
@@ -886,7 +936,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
     </div>
 
     <!-- Code Change Request Section -->
-    <div class="payout-section">
+    <div id="codeChangeSection" class="payout-section">
         <h2>Affiliate Code Management</h2>
 
         <?php
