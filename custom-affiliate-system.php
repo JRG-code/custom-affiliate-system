@@ -73,9 +73,34 @@ class Custom_Affiliate_System {
     
     public function force_register_settings() {
         // Force register immediately to prevent "not in allowed options" error
-        register_setting('cas_settings_group', 'cas_settings');
+        register_setting('cas_settings_group', 'cas_settings', 'cas_sanitize_settings');
         register_setting('cas_settings_group', 'cas_debug_enabled');
         register_setting('cas_settings_group', 'cas_pro_license_key');
+
+        // Register settings sections and fields
+        if (!cas_is_pro_active()) {
+            add_settings_section('cas_license_section', '🔐 Pro License', 'cas_license_section_callback', 'cas-settings');
+            add_settings_field('pro_license_key', 'License Key', 'cas_license_key_field_callback', 'cas-settings', 'cas_license_section');
+        }
+
+        // General Section
+        add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
+        add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('auto_create_affiliate', 'Auto-Create Affiliates', 'cas_auto_create_affiliate_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('default_tier', 'Default Tier', 'cas_default_tier_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
+
+        // Automatic Payouts Section
+        add_settings_section('cas_payouts_section', '💰 Automatic Payouts', 'cas_payouts_section_callback', 'cas-settings');
+        add_settings_field('auto_payouts_enabled', 'Enable Automatic Payouts', 'cas_auto_payouts_enabled_field_callback', 'cas-settings', 'cas_payouts_section');
+        add_settings_field('payout_schedule', 'Payout Schedule', 'cas_payout_schedule_field_callback', 'cas-settings', 'cas_payouts_section');
+
+        // Debug Section
+        add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
+        add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
     }
     
     public function activate() {
