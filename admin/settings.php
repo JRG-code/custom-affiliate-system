@@ -2,43 +2,10 @@
 /**
  * Admin Settings Page - General Settings Only
  * (Tier settings moved to Tier Management page)
+ * Settings registration is done in main plugin file (custom-affiliate-system.php)
  */
 
 if (!defined('ABSPATH')) exit;
-
-// CRITICAL FIX: Register settings IMMEDIATELY
-add_action('admin_init', 'cas_register_settings_immediate', 5);
-
-function cas_register_settings_immediate() {
-    register_setting('cas_settings_group', 'cas_settings', 'cas_sanitize_settings');
-    register_setting('cas_settings_group', 'cas_debug_enabled');
-    register_setting('cas_settings_group', 'cas_pro_license_key');
-    
-    // License Section (only if not pro)
-    if (!cas_is_pro_active()) {
-        add_settings_section('cas_license_section', '🔐 Pro License', 'cas_license_section_callback', 'cas-settings');
-        add_settings_field('pro_license_key', 'License Key', 'cas_license_key_field_callback', 'cas-settings', 'cas_license_section');
-    }
-    
-    // General Section
-    add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
-    add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('auto_create_affiliate', 'Auto-Create Affiliates', 'cas_auto_create_affiliate_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('default_tier', 'Default Tier', 'cas_default_tier_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
-    add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
-    
-    // Automatic Payouts Section
-    add_settings_section('cas_payouts_section', '💰 Automatic Payouts', 'cas_payouts_section_callback', 'cas-settings');
-    add_settings_field('auto_payouts_enabled', 'Enable Automatic Payouts', 'cas_auto_payouts_enabled_field_callback', 'cas-settings', 'cas_payouts_section');
-    add_settings_field('payout_schedule', 'Payout Schedule', 'cas_payout_schedule_field_callback', 'cas-settings', 'cas_payouts_section');
-
-    // Debug Section
-    add_settings_section('cas_debug_section', '🐛 Debug Settings', 'cas_debug_section_callback', 'cas-settings');
-    add_settings_field('debug_enabled', 'Enable Debug Mode', 'cas_debug_enabled_field_callback', 'cas-settings', 'cas_debug_section');
-}
 
 // License section callback
 function cas_license_section_callback() {
@@ -216,32 +183,41 @@ function cas_debug_enabled_field_callback() {
     <?php
 }
 
-// Sanitize settings
-function cas_sanitize_settings($input) {
-    $sanitized = get_option('cas_settings', array());
+// Sanitize settings callback
+if (!function_exists('cas_sanitize_settings')) {
+    function cas_sanitize_settings($input) {
+        $sanitized = get_option('cas_settings', array());
 
-    // Only update general settings (don't touch tier settings)
-    if (isset($input['general'])) {
-        $sanitized['general']['currency_symbol'] = sanitize_text_field($input['general']['currency_symbol']);
-        $sanitized['general']['support_email'] = sanitize_email($input['general']['support_email']);
-        $sanitized['general']['auto_create_affiliate'] = isset($input['general']['auto_create_affiliate']) ? 1 : 0;
-        $sanitized['general']['auto_approve'] = isset($input['general']['auto_approve']) ? 1 : 0;
-        $sanitized['general']['send_welcome_email'] = isset($input['general']['send_welcome_email']) ? 1 : 0;
-        $sanitized['general']['terms_page'] = intval($input['general']['terms_page']);
-        $sanitized['general']['auto_payouts_enabled'] = isset($input['general']['auto_payouts_enabled']) ? 1 : 0;
-        $sanitized['general']['payout_schedule'] = sanitize_text_field($input['general']['payout_schedule'] ?? 'monthly');
+        // Only update general settings (don't touch tier settings)
+        if (isset($input['general'])) {
+            if (!isset($sanitized['general'])) {
+                $sanitized['general'] = array();
+            }
+
+            $sanitized['general']['currency_symbol'] = sanitize_text_field($input['general']['currency_symbol'] ?? '€');
+            $sanitized['general']['support_email'] = sanitize_email($input['general']['support_email'] ?? get_option('admin_email'));
+            $sanitized['general']['auto_create_affiliate'] = isset($input['general']['auto_create_affiliate']) ? 1 : 0;
+            $sanitized['general']['default_tier'] = sanitize_key($input['general']['default_tier'] ?? 'tier_1');
+            $sanitized['general']['auto_approve'] = isset($input['general']['auto_approve']) ? 1 : 0;
+            $sanitized['general']['send_welcome_email'] = isset($input['general']['send_welcome_email']) ? 1 : 0;
+            $sanitized['general']['terms_page'] = intval($input['general']['terms_page'] ?? 0);
+            $sanitized['general']['auto_payouts_enabled'] = isset($input['general']['auto_payouts_enabled']) ? 1 : 0;
+            $sanitized['general']['payout_schedule'] = sanitize_text_field($input['general']['payout_schedule'] ?? 'monthly');
+        }
+
+        // Reschedule automatic payouts if settings changed
+        $timestamp = wp_next_scheduled('cas_process_automatic_payouts');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'cas_process_automatic_payouts');
+        }
+        if (function_exists('cas_schedule_automatic_payouts')) {
+            cas_schedule_automatic_payouts();
+        }
+
+        add_settings_error('cas_settings', 'cas_settings_updated', '✅ Settings saved successfully!', 'success');
+
+        return $sanitized;
     }
-
-    // Reschedule automatic payouts if settings changed
-    $timestamp = wp_next_scheduled('cas_process_automatic_payouts');
-    if ($timestamp) {
-        wp_unschedule_event($timestamp, 'cas_process_automatic_payouts');
-    }
-    cas_schedule_automatic_payouts();
-
-    add_settings_error('cas_settings', 'cas_settings_updated', '✅ Settings saved successfully!', 'success');
-
-    return $sanitized;
 }
 
 // Handle debug setting separately
