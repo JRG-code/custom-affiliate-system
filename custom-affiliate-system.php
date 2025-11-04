@@ -3,7 +3,7 @@
  * Plugin Name: Custom Affiliate System
  * Plugin URI: https://thecouplesbrand.com
  * Description: Complete affiliate system with auto-registration, coupon generation, commission tracking, and modern dashboard. Free: Tier I & II. Pro: Unlimited tiers.
- * Version: 1.1.3
+ * Version: 1.2.0
  * Author: José Godinho
  * Author URI: https://thecouplesbrand.com
  * Text Domain: custom-affiliate
@@ -36,7 +36,7 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
 }
 
 // Define constants
-define('CAS_VERSION', '1.1.3');
+define('CAS_VERSION', '1.2.0');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CAS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
