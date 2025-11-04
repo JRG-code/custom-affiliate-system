@@ -24,7 +24,9 @@ function cas_register_settings_immediate() {
     add_settings_section('cas_general_section', '⚙️ General Settings', 'cas_general_section_callback', 'cas-settings');
     add_settings_field('currency_symbol', 'Currency Symbol', 'cas_currency_symbol_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('support_email', 'Support Email', 'cas_support_email_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('auto_create_affiliate', 'Auto-Create Affiliates', 'cas_auto_create_affiliate_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
+    add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
     add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
     
     // Debug Section
@@ -86,6 +88,18 @@ function cas_support_email_field_callback() {
     <?php
 }
 
+function cas_auto_create_affiliate_field_callback() {
+    $options = get_option('cas_settings', array());
+    $value = isset($options['general']['auto_create_affiliate']) ? $options['general']['auto_create_affiliate'] : 1;
+    ?>
+    <label>
+        <input type="checkbox" name="cas_settings[general][auto_create_affiliate]" value="1" <?php checked($value, 1); ?>>
+        Automatically create affiliate account when user registers
+    </label>
+    <p class="description">When enabled, every new user becomes an affiliate automatically</p>
+    <?php
+}
+
 function cas_auto_approve_field_callback() {
     $options = get_option('cas_settings', array());
     $value = isset($options['general']['auto_approve']) ? $options['general']['auto_approve'] : 1;
@@ -95,6 +109,18 @@ function cas_auto_approve_field_callback() {
         Automatically approve new affiliate registrations
     </label>
     <p class="description">If disabled, new affiliates will be pending manual approval</p>
+    <?php
+}
+
+function cas_send_welcome_email_field_callback() {
+    $options = get_option('cas_settings', array());
+    $value = isset($options['general']['send_welcome_email']) ? $options['general']['send_welcome_email'] : 1;
+    ?>
+    <label>
+        <input type="checkbox" name="cas_settings[general][send_welcome_email]" value="1" <?php checked($value, 1); ?>>
+        Send welcome email when affiliate is created
+    </label>
+    <p class="description">Email will be sent after a 10-second delay to ensure account is fully set up</p>
     <?php
 }
 
@@ -129,17 +155,19 @@ function cas_debug_enabled_field_callback() {
 // Sanitize settings
 function cas_sanitize_settings($input) {
     $sanitized = get_option('cas_settings', array());
-    
+
     // Only update general settings (don't touch tier settings)
     if (isset($input['general'])) {
         $sanitized['general']['currency_symbol'] = sanitize_text_field($input['general']['currency_symbol']);
         $sanitized['general']['support_email'] = sanitize_email($input['general']['support_email']);
+        $sanitized['general']['auto_create_affiliate'] = isset($input['general']['auto_create_affiliate']) ? 1 : 0;
         $sanitized['general']['auto_approve'] = isset($input['general']['auto_approve']) ? 1 : 0;
+        $sanitized['general']['send_welcome_email'] = isset($input['general']['send_welcome_email']) ? 1 : 0;
         $sanitized['general']['terms_page'] = intval($input['general']['terms_page']);
     }
-    
+
     add_settings_error('cas_settings', 'cas_settings_updated', '✅ Settings saved successfully!', 'success');
-    
+
     return $sanitized;
 }
 
