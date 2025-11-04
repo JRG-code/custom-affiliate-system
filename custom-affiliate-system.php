@@ -1107,16 +1107,7 @@ class Custom_Affiliate_System {
         'dashicons-groups',
         30
     );
-    
-    add_submenu_page(
-        'affiliate-system',
-        'Add Affiliate',
-        'Add Affiliate',
-        'manage_options',
-        'affiliate-add',
-        array($this, 'admin_add_affiliate_page')
-    );
-    
+
     add_submenu_page(
         'affiliate-system',
         'Payouts',
