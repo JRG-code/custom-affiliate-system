@@ -884,7 +884,82 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
             <p>Check our <a href="<?php echo esc_url($terms_url); ?>" target="_blank">Terms and Conditions</a> for more information about the affiliate program.</p>
         </div>
     </div>
-    
+
+    <!-- Code Change Request Section -->
+    <div class="payout-section">
+        <h2>Affiliate Code Management</h2>
+
+        <?php
+        // Check if user can edit code (tier setting)
+        $can_edit_code = cas_get_tier_setting($affiliate->tier, 'allow_code_edit');
+
+        // Check for pending code change request
+        $pending_code_change = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
+            WHERE affiliate_id = %d AND status = 'pending'
+            ORDER BY requested_at DESC LIMIT 1",
+            $affiliate->id
+        ));
+
+        // Check last approved change date (for 30-day limit)
+        $last_change = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
+            WHERE affiliate_id = %d AND status = 'approved'
+            ORDER BY requested_at DESC LIMIT 1",
+            $affiliate->id
+        ));
+
+        $can_request = true;
+        $reason = '';
+
+        if (!$can_edit_code) {
+            $can_request = false;
+            $reason = 'Your tier does not allow code changes.';
+        } elseif ($pending_code_change) {
+            $can_request = false;
+            $reason = 'You already have a pending code change request.';
+        } elseif ($last_change) {
+            $days_since_change = floor((time() - strtotime($last_change->requested_at)) / 86400);
+            if ($days_since_change < 30) {
+                $can_request = false;
+                $days_remaining = 30 - $days_since_change;
+                $reason = "You can request a code change again in {$days_remaining} days.";
+            }
+        }
+        ?>
+
+        <div class="balance-display">
+            <div>
+                <p class="balance-label">Current Code</p>
+                <p class="balance-amount" style="color: #667eea; font-size: 28px;"><?php echo esc_html($affiliate->affiliate_code); ?></p>
+            </div>
+            <div class="balance-info">
+                <p class="info-item">Tier: <?php echo esc_html($tier_name); ?></p>
+                <p class="info-item">Code Changes: <?php echo $can_edit_code ? 'Allowed (1x/month)' : 'Not Allowed'; ?></p>
+            </div>
+        </div>
+
+        <?php if ($pending_code_change): ?>
+            <div class="alert alert-info">
+                <strong>Pending Request</strong><br>
+                You requested to change your code to <strong><?php echo esc_html($pending_code_change->new_code); ?></strong>
+                on <?php echo date('d/m/Y', strtotime($pending_code_change->requested_at)); ?>.<br>
+                <small>An administrator will review your request shortly.</small>
+            </div>
+        <?php elseif ($can_request): ?>
+            <div class="payout-available">
+                <button class="btn-primary" onclick="openCodeChangeModal()" style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);">
+                    Request Code Change
+                </button>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-warning">
+                <strong>Code Change Not Available</strong><br>
+                <?php echo $reason; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Recent Sales -->
     <?php if (!empty($recent_referrals)): ?>
     <div class="recent-sales-section">
@@ -1032,6 +1107,41 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
     </div>
 </div>
 
+<!-- Code Change Modal -->
+<div id="codeChangeModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCodeChangeModal()">&times;</span>
+        <h2>Request Code Change</h2>
+
+        <form id="codeChangeForm">
+            <div class="form-group">
+                <label>Current Code</label>
+                <input type="text" value="<?php echo esc_attr($affiliate->affiliate_code); ?>" readonly>
+            </div>
+
+            <div class="form-group">
+                <label>New Code *</label>
+                <input type="text" name="new_code" id="new_code" pattern="[A-Z0-9]{5,15}" placeholder="MYNEWCODE" required maxlength="15" style="text-transform: uppercase;">
+                <small>5-15 characters, uppercase letters and numbers only</small>
+            </div>
+
+            <div class="form-group">
+                <label>Reason for Change *</label>
+                <textarea name="reason" rows="3" placeholder="Why do you want to change your affiliate code?" required></textarea>
+            </div>
+
+            <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; font-size: 13px; color: #856404;">
+                    <strong>Important:</strong> Code changes are limited to once every 30 days. Your new code must be unique and not already in use.
+                </p>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);">Submit Request</button>
+            <div id="codeChangeMessage" style="margin-top: 15px;"></div>
+        </form>
+    </div>
+</div>
+
 <script>
 // Copy promo code
 function copyCode() {
@@ -1076,15 +1186,20 @@ function closePayoutModal() {
 
 // Close modal on ESC or backdrop click
 window.onclick = function(event) {
-    const modal = document.getElementById('payoutModal');
-    if (event.target === modal) {
+    const payoutModal = document.getElementById('payoutModal');
+    const codeChangeModal = document.getElementById('codeChangeModal');
+    if (event.target === payoutModal) {
         closePayoutModal();
+    }
+    if (event.target === codeChangeModal) {
+        closeCodeChangeModal();
     }
 }
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closePayoutModal();
+        closeCodeChangeModal();
     }
 });
 
@@ -1122,6 +1237,58 @@ document.getElementById('payoutForm').addEventListener('submit', function(e) {
         btn.innerHTML = originalText;
         btn.disabled = false;
     });
+});
+
+// Open/close code change modal
+function openCodeChangeModal() {
+    document.getElementById('codeChangeModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCodeChangeModal() {
+    document.getElementById('codeChangeModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Handle code change form submission
+document.getElementById('codeChangeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Submitting...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+    formData.append('action', 'request_code_change');
+
+    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        const msg = document.getElementById('codeChangeMessage');
+        if (data.success) {
+            msg.innerHTML = '<div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 6px; color: #065f46;">✓ ' + data.data + '</div>';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            msg.innerHTML = '<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; color: #991b1b;">✗ ' + data.data + '</div>';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        const msg = document.getElementById('codeChangeMessage');
+        msg.innerHTML = '<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; color: #991b1b;">✗ Connection error. Please try again.</div>';
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+
+// Auto-uppercase new code input
+document.getElementById('new_code').addEventListener('input', function() {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 });
 
 // Update payment details placeholder based on method
