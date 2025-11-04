@@ -30,21 +30,24 @@ function cas_get_tier_setting($tier, $field) {
             'min_payout' => 20,         // Mínimo 20€ para levantar
             'payment_days' => 30,       // Pagamento em 30 dias
             'coupon_discount' => 5,     // 5€ de desconto no cupão
-            'allow_code_edit' => 0      // Não permite editar código
+            'allow_code_edit' => 0,     // Não permite editar código
+            'allow_self_referral' => 0  // Não permite auto-referência
         ),
         'tier_2' => array(
             'commission' => 15,         // 15% de comissão
             'min_payout' => 0,          // Sem mínimo
             'payment_days' => 3,        // Pagamento em 3 dias
             'coupon_discount' => 5,     // 5€ de desconto
-            'allow_code_edit' => 1      // Permite editar código 1x/mês
+            'allow_code_edit' => 1,     // Permite editar código 1x/mês
+            'allow_self_referral' => 1  // Permite auto-referência
         ),
         'ambassador' => array(
             'commission' => 20,         // 20% de comissão
             'min_payout' => 0,          // Sem mínimo
             'payment_days' => 3,        // Pagamento em 3 dias
             'coupon_discount' => 5,     // 5€ de desconto
-            'allow_code_edit' => 1      // Permite editar código 1x/mês
+            'allow_code_edit' => 1,     // Permite editar código 1x/mês
+            'allow_self_referral' => 1  // Permite auto-referência
         )
     );
     
@@ -282,21 +285,24 @@ function cas_init_default_settings() {
                 'min_payout' => 20,
                 'payment_days' => 30,
                 'coupon_discount' => 5,
-                'allow_code_edit' => 0
+                'allow_code_edit' => 0,
+                'allow_self_referral' => 0
             ),
             'tier_2' => array(
                 'commission' => 15,
                 'min_payout' => 0,
                 'payment_days' => 3,
                 'coupon_discount' => 5,
-                'allow_code_edit' => 1
+                'allow_code_edit' => 1,
+                'allow_self_referral' => 1
             ),
             'ambassador' => array(
                 'commission' => 20,
                 'min_payout' => 0,
                 'payment_days' => 3,
                 'coupon_discount' => 5,
-                'allow_code_edit' => 1
+                'allow_code_edit' => 1,
+                'allow_self_referral' => 1
             ),
             'general' => array(
                 'currency_symbol' => '€',
@@ -698,6 +704,7 @@ function cas_create_custom_tier($tier_id, $data) {
         'payment_days' => intval($data['payment_days'] ?? 3),
         'coupon_discount' => floatval($data['coupon_discount'] ?? 5),
         'allow_code_edit' => isset($data['allow_code_edit']) ? intval($data['allow_code_edit']) : 1,
+        'allow_self_referral' => isset($data['allow_self_referral']) ? intval($data['allow_self_referral']) : 1,
         'color' => sanitize_hex_color($data['color'] ?? '#667eea'),
         'created_at' => current_time('mysql')
     );
@@ -711,7 +718,8 @@ function cas_create_custom_tier($tier_id, $data) {
         'min_payout' => $existing_tiers[$tier_id]['min_payout'],
         'payment_days' => $existing_tiers[$tier_id]['payment_days'],
         'coupon_discount' => $existing_tiers[$tier_id]['coupon_discount'],
-        'allow_code_edit' => $existing_tiers[$tier_id]['allow_code_edit']
+        'allow_code_edit' => $existing_tiers[$tier_id]['allow_code_edit'],
+        'allow_self_referral' => $existing_tiers[$tier_id]['allow_self_referral']
     );
     update_option('cas_settings', $cas_settings);
     
@@ -750,6 +758,9 @@ function cas_update_custom_tier($tier_id, $data) {
     if (isset($data['allow_code_edit'])) {
         $custom_tiers[$tier_id]['allow_code_edit'] = intval($data['allow_code_edit']);
     }
+    if (isset($data['allow_self_referral'])) {
+        $custom_tiers[$tier_id]['allow_self_referral'] = intval($data['allow_self_referral']);
+    }
     if (isset($data['color'])) {
         $custom_tiers[$tier_id]['color'] = sanitize_hex_color($data['color']);
     }
@@ -763,7 +774,8 @@ function cas_update_custom_tier($tier_id, $data) {
         'min_payout' => $custom_tiers[$tier_id]['min_payout'],
         'payment_days' => $custom_tiers[$tier_id]['payment_days'],
         'coupon_discount' => $custom_tiers[$tier_id]['coupon_discount'],
-        'allow_code_edit' => $custom_tiers[$tier_id]['allow_code_edit']
+        'allow_code_edit' => $custom_tiers[$tier_id]['allow_code_edit'],
+        'allow_self_referral' => $custom_tiers[$tier_id]['allow_self_referral']
     );
     update_option('cas_settings', $cas_settings);
     

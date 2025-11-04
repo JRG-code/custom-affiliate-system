@@ -184,6 +184,9 @@ class Custom_Affiliate_System {
         add_action('woocommerce_created_customer', array($this, 'auto_create_affiliate'), 10, 1);
         add_action('woocommerce_order_status_completed', array($this, 'track_commission'), 10, 1);
         add_action('woocommerce_order_status_processing', array($this, 'track_commission'), 10, 1);
+        add_action('woocommerce_order_status_refunded', array($this, 'handle_refund'), 10, 1);
+        add_action('woocommerce_order_status_cancelled', array($this, 'handle_refund'), 10, 1);
+        add_action('woocommerce_order_fully_refunded', array($this, 'handle_refund'), 10, 1);
         add_action('init', array($this, 'process_registration'));
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_notices', array($this, 'admin_notices'));
@@ -508,18 +511,18 @@ class Custom_Affiliate_System {
                 continue;
             }
 
-            // FRAUD DETECTION: Check for self-referral
-            if (cas_is_self_referral($order_id, $affiliate_user_id)) {
-                // Block the commission - self-referral not allowed!
-                continue;
-            }
-
             $affiliate = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d AND status = 'active'",
                 $affiliate_user_id
             ));
 
             if (!$affiliate) {
+                continue;
+            }
+
+            // FRAUD DETECTION: Check for self-referral based on tier settings
+            if (cas_is_self_referral($order_id, $affiliate_user_id, $affiliate->tier)) {
+                // Self-referral blocked for this tier
                 continue;
             }
             
@@ -565,7 +568,123 @@ class Custom_Affiliate_System {
             $this->send_commission_email($affiliate_user_id, $coupon_code, $order_total, $commission_amount);
         }
     }
-    
+
+    // === HANDLE REFUNDS/CANCELLATIONS ===
+
+    public function handle_refund($order_id) {
+        global $wpdb;
+
+        // Check if this order had commission tracked
+        $referrals = $wpdb->get_results($wpdb->prepare("
+            SELECT * FROM {$wpdb->prefix}affiliate_referrals
+            WHERE order_id = %d
+        ", $order_id));
+
+        if (empty($referrals)) {
+            return; // No commission to refund
+        }
+
+        foreach ($referrals as $referral) {
+            // Only process if commission hasn't been paid yet
+            if ($referral->status === 'unpaid') {
+                // Deduct commission from affiliate's unpaid balance
+                $wpdb->query($wpdb->prepare("
+                    UPDATE {$wpdb->prefix}affiliates
+                    SET total_commission = total_commission - %f,
+                        unpaid_commission = unpaid_commission - %f,
+                        total_sales = total_sales - %f
+                    WHERE id = %d
+                ", $referral->commission_amount, $referral->commission_amount, $referral->order_total, $referral->affiliate_id));
+
+                // Delete the referral record
+                $wpdb->delete(
+                    $wpdb->prefix . 'affiliate_referrals',
+                    array('id' => $referral->id),
+                    array('%d')
+                );
+
+                // Send notification email to affiliate
+                $affiliate = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}affiliates WHERE id = %d",
+                    $referral->affiliate_id
+                ));
+
+                if ($affiliate) {
+                    $this->send_refund_notification_email($affiliate->user_id, $referral->commission_amount, $order_id);
+                }
+
+                cas_debug_log("Refund processed: Order #{$order_id}, Commission deducted: €{$referral->commission_amount}, Affiliate ID: {$referral->affiliate_id}", 'info');
+            } else {
+                // Commission was already paid - log as warning
+                cas_debug_log("WARNING: Order #{$order_id} refunded but commission was already paid to affiliate #{$referral->affiliate_id}. Manual intervention required.", 'warning');
+
+                // Send alert to admin
+                $this->send_paid_commission_refund_alert($referral, $order_id);
+            }
+        }
+    }
+
+    private function send_refund_notification_email($user_id, $commission_amount, $order_id) {
+        $user = get_userdata($user_id);
+        if (!$user) return;
+
+        $to = $user->user_email;
+        $subject = 'Order Refunded - Commission Adjusted';
+        $message = "
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+            <h2 style='color: #ef4444;'>Order Refunded</h2>
+            <p>Hello <strong>{$user->display_name}</strong>,</p>
+            <p>An order that generated commission for you has been refunded or cancelled.</p>
+            <div style='background: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                <p style='margin: 5px 0;'><strong>Order ID:</strong> #{$order_id}</p>
+                <p style='margin: 5px 0;'><strong>Commission Deducted:</strong> €" . number_format($commission_amount, 2) . "</p>
+            </div>
+            <p>Your unpaid commission balance has been adjusted accordingly.</p>
+            <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>View Dashboard →</a></p>
+        </body>
+        </html>
+        ";
+
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($to, $subject, $message, $headers);
+    }
+
+    private function send_paid_commission_refund_alert($referral, $order_id) {
+        $admin_email = cas_get_support_email();
+        $subject = '⚠️ Refund Alert: Commission Already Paid';
+
+        $message = "
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+            <div style='background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; margin-bottom: 20px;'>
+                <h2 style='color: #991b1b; margin: 0;'>⚠️ Manual Intervention Required</h2>
+            </div>
+
+            <p>An order has been refunded, but the commission was already paid to the affiliate.</p>
+
+            <div style='background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                <p style='margin: 5px 0;'><strong>Order ID:</strong> #{$order_id}</p>
+                <p style='margin: 5px 0;'><strong>Affiliate ID:</strong> {$referral->affiliate_id}</p>
+                <p style='margin: 5px 0;'><strong>Commission Amount:</strong> €" . number_format($referral->commission_amount, 2) . "</p>
+                <p style='margin: 5px 0;'><strong>Status:</strong> Already Paid</p>
+            </div>
+
+            <p><strong>Action Needed:</strong> You may need to request the commission back from the affiliate or adjust their next payout.</p>
+
+            <p style='margin: 30px 0;'>
+                <a href='" . admin_url('admin.php?page=affiliate-system') . "' style='background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>
+                    Review in Admin Panel →
+                </a>
+            </p>
+        </body>
+        </html>
+        ";
+
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($admin_email, $subject, $message, $headers);
+    }
+
     private function send_commission_email($user_id, $code, $total, $commission) {
         $user = get_userdata($user_id);
         $to = $user->user_email;

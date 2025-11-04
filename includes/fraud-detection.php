@@ -9,39 +9,61 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Check if order is a self-referral (affiliate buying with own code)
+ * Check if order is a self-referral AND if it should be blocked based on tier settings
  *
  * @param int $order_id Order ID
  * @param int $affiliate_user_id Affiliate user ID
- * @return bool True if self-referral detected
+ * @param string $affiliate_tier Affiliate tier
+ * @return bool True if self-referral detected AND should be blocked
  */
-function cas_is_self_referral($order_id, $affiliate_user_id) {
+function cas_is_self_referral($order_id, $affiliate_user_id, $affiliate_tier = 'tier_1') {
     $order = wc_get_order($order_id);
     if (!$order) {
         return false;
     }
 
     $customer_id = $order->get_customer_id();
+    $is_self_referral = false;
 
     // Check if customer is the same as affiliate
     if ($customer_id && $customer_id == $affiliate_user_id) {
-        cas_log_fraud_attempt($affiliate_user_id, 'self_referral', array(
-            'order_id' => $order_id,
-            'message' => 'Affiliate attempted to use own code'
-        ));
-        return true;
+        $is_self_referral = true;
     }
 
     // Check by email if no customer ID
-    $customer_email = $order->get_billing_email();
-    $affiliate_user = get_userdata($affiliate_user_id);
+    if (!$is_self_referral) {
+        $customer_email = $order->get_billing_email();
+        $affiliate_user = get_userdata($affiliate_user_id);
 
-    if ($customer_email && $affiliate_user && $customer_email === $affiliate_user->user_email) {
-        cas_log_fraud_attempt($affiliate_user_id, 'self_referral', array(
-            'order_id' => $order_id,
-            'message' => 'Email match detected'
-        ));
-        return true;
+        if ($customer_email && $affiliate_user && $customer_email === $affiliate_user->user_email) {
+            $is_self_referral = true;
+        }
+    }
+
+    // If it IS a self-referral, check if tier allows it
+    if ($is_self_referral) {
+        // Check if this tier allows self-referral
+        $allow_self_referral = cas_get_tier_setting($affiliate_tier, 'allow_self_referral');
+
+        if ($allow_self_referral) {
+            // Tier allows self-referral - log but don't block
+            cas_log_fraud_attempt($affiliate_user_id, 'self_referral_allowed', array(
+                'severity' => 'info',
+                'order_id' => $order_id,
+                'tier' => $affiliate_tier,
+                'message' => 'Self-referral allowed for this tier'
+            ));
+            return false; // Don't block
+        } else {
+            // Tier does NOT allow self-referral - log and block
+            cas_log_fraud_attempt($affiliate_user_id, 'self_referral_blocked', array(
+                'severity' => 'high',
+                'order_id' => $order_id,
+                'tier' => $affiliate_tier,
+                'message' => 'Self-referral blocked for this tier'
+            ));
+            return true; // Block it
+        }
     }
 
     return false;
