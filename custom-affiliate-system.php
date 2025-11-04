@@ -1107,25 +1107,7 @@ class Custom_Affiliate_System {
         'dashicons-groups',
         30
     );
-    
-    add_submenu_page(
-        'affiliate-system',
-        'Add Affiliate',
-        'Add Affiliate',
-        'manage_options',
-        'affiliate-add',
-        array($this, 'admin_add_affiliate_page')
-    );
-    
-    add_submenu_page(
-        'affiliate-system',
-        'Payouts',
-        'Payouts',
-        'manage_options',
-        'affiliate-payouts',
-        array($this, 'admin_payouts_page')
-    );
-    
+
     add_submenu_page(
         'affiliate-system',
         'Reports',
@@ -1133,15 +1115,6 @@ class Custom_Affiliate_System {
         'manage_options',
         'affiliate-reports',
         array($this, 'admin_reports_page')
-    );
-
-    add_submenu_page(
-        'affiliate-system',
-        'Code Change Requests',
-        'Code Change Requests',
-        'manage_options',
-        'affiliate-code-changes',
-        array($this, 'admin_code_changes_page')
     );
 
     add_submenu_page(
