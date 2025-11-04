@@ -45,6 +45,8 @@ require_once CAS_PLUGIN_DIR . 'includes/helpers.php';
 require_once CAS_PLUGIN_DIR . 'includes/pro-license.php';
 require_once CAS_PLUGIN_DIR . 'includes/fraud-detection.php';
 require_once CAS_PLUGIN_DIR . 'includes/scheduled-payments.php';
+require_once CAS_PLUGIN_DIR . 'includes/mobile-widgets.php';
+require_once CAS_PLUGIN_DIR . 'includes/dashboard-charts.php';
 
 class Custom_Affiliate_System {
     

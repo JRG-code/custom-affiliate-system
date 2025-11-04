@@ -304,7 +304,9 @@ function cas_init_default_settings() {
                 'auto_create_affiliate' => 1,
                 'auto_approve' => 1,
                 'send_welcome_email' => 1,
-                'terms_page' => 0
+                'terms_page' => 0,
+                'auto_payouts_enabled' => 0,
+                'payout_schedule' => 'monthly'
             )
         );
 

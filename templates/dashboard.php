@@ -720,7 +720,15 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
             </div>
         </div>
     </div>
-    
+
+    <!-- Mobile Quick Stats Widgets -->
+    <?php cas_render_mobile_quick_stats($affiliate); ?>
+
+    <!-- Performance Mini Chart (Mobile Optimized) -->
+    <div style="background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
+        <?php cas_render_performance_mini_chart($affiliate->id); ?>
+    </div>
+
     <!-- Stats Grid -->
     <div class="stats-grid">
         
@@ -865,7 +873,10 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         </div>
     </div>
     <?php endif; ?>
-    
+
+    <!-- Analytics Dashboard with Charts -->
+    <?php cas_render_analytics_dashboard($affiliate->id); ?>
+
     <!-- Tier Info & Conditions -->
     <div class="conditions-section">
         <h2>Program Conditions</h2>
