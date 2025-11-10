@@ -1150,16 +1150,26 @@ class Custom_Affiliate_System {
         'affiliate-settings',
         array($this, 'admin_settings_page')
     );
-    
-    // Tier Management (Pro only)
+
+    // Tier Management (Edit Tier I & II is FREE, Create new tiers is PRO)
+    add_submenu_page(
+        'affiliate-system',
+        'Tier Management',
+        'Tier Management',
+        'manage_options',
+        'affiliate-tiers',
+        array($this, 'admin_tier_management_page')
+    );
+
+    // Advanced Features (PRO only)
     if (cas_is_pro_active()) {
         add_submenu_page(
             'affiliate-system',
-            'Tier Management',
-            'Tier Management ' . cas_pro_badge(),
+            'Advanced Features',
+            'Advanced Features ' . cas_pro_badge(),
             'manage_options',
-            'affiliate-tiers',
-            array($this, 'admin_tier_management_page')
+            'affiliate-advanced',
+            array($this, 'admin_advanced_features_page')
         );
     }
 
@@ -1251,6 +1261,13 @@ class Custom_Affiliate_System {
 
     public function admin_tier_management_page() {
         $file = CAS_PLUGIN_DIR . 'admin/tier-management.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
+    public function admin_advanced_features_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/advanced-features.php';
         if (file_exists($file)) {
             include $file;
         }
