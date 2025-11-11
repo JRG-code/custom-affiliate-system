@@ -277,6 +277,15 @@ if (isset($_POST['delete_tier']) && check_admin_referer('cas_delete_tier')) {
     }
 }
 
+// Handle restore backup
+if (isset($_POST['restore_settings_backup']) && check_admin_referer('cas_restore_backup')) {
+    if (cas_restore_settings_from_backup()) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Settings have been restored from backup.</p></div>';
+    } else {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Error:</strong> No backup found or backup is empty.</p></div>';
+    }
+}
+
 // Get all tiers (default + custom)
 $all_tiers = cas_get_available_tiers();
 $custom_tiers_only = get_option('cas_custom_tiers', array());
@@ -290,10 +299,34 @@ foreach (array_keys($all_tiers) as $tier_id) {
     ));
 }
 
+// Check if backup exists
+$backup_info = cas_get_settings_backup_info();
+
 ?>
 
 <div class="wrap">
     <h1>🎯 Tier Management <?php echo cas_pro_badge(); ?></h1>
+
+    <!-- Settings Backup Notice -->
+    <?php if ($backup_info): ?>
+    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="color: #856404;">📦 Settings Backup Available</strong>
+                <p style="margin: 5px 0 0 0; color: #856404; font-size: 13px;">
+                    A backup of your tier settings was created on <?php echo date('F j, Y \a\t g:i a', strtotime($backup_info['date'])); ?>.
+                    If your settings were accidentally changed, you can restore them.
+                </p>
+            </div>
+            <form method="post" style="margin: 0;">
+                <?php wp_nonce_field('cas_restore_backup'); ?>
+                <button type="submit" name="restore_settings_backup" class="button" onclick="return confirm('Restore tier settings from backup? This will overwrite your current settings.');">
+                    ⟲ Restore Backup
+                </button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
     
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin: 20px 0;">
         <h2 style="margin: 0 0 10px 0; color: white;">Create Custom Tiers</h2>
@@ -367,14 +400,55 @@ foreach (array_keys($all_tiers) as $tier_id) {
         $editing_tier = $all_tiers[$editing_tier_id];
         $editing_settings = cas_get_all_tier_settings($editing_tier_id);
         $is_default_tier = in_array($editing_tier_id, array('tier_1', 'tier_2', 'ambassador'));
+
+        // Get suggested settings for this tier
+        $suggested_settings = cas_get_suggested_tier_settings($editing_tier_id);
     ?>
+
+    <!-- Suggested Settings Box -->
+    <?php if ($suggested_settings): ?>
+    <div style="background: #f0f9ff; border: 2px solid #0284c7; padding: 25px; border-radius: 12px; margin: 20px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #0c4a6e;">💡 Suggested Settings for <?php echo esc_html($editing_tier['name']); ?></h3>
+            <button type="button" class="button button-primary" onclick="applySuggestedSettings('<?php echo esc_js($editing_tier_id); ?>')">
+                ✓ Accept Suggestion
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Commission:</strong> <?php echo $suggested_settings['commission']; ?>%
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Min Payout:</strong> <?php echo $suggested_settings['min_payout'] > 0 ? $suggested_settings['min_payout'] . '€' : 'No minimum'; ?>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Payment Days:</strong> <?php echo $suggested_settings['payment_days']; ?> days
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Coupon Discount:</strong> <?php echo $suggested_settings['coupon_discount']; ?>€
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Code Edit:</strong> <?php echo $suggested_settings['allow_code_edit'] ? '✓ Allowed' : '✗ Not allowed'; ?>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 6px;">
+                <strong style="color: #0c4a6e;">Self-Referral:</strong> <?php echo $suggested_settings['allow_self_referral'] ? '✓ Allowed' : '✗ Blocked'; ?>
+            </div>
+        </div>
+
+        <p style="margin: 15px 0 0 0; font-size: 13px; color: #0c4a6e;">
+            <strong>Note:</strong> These are recommended best-practice settings. Click "Accept Suggestion" to apply them, or manually configure below.
+        </p>
+    </div>
+    <?php endif; ?>
+
     <div id="editTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">⚙️ Edit Tier: <?php echo esc_html($editing_tier['name']); ?></h2>
             <a href="?page=affiliate-tiers" class="button">✕ Cancel</a>
         </div>
 
-        <form method="post" action="">
+        <form method="post" action="" id="editTierFormElement">
             <?php wp_nonce_field('cas_edit_tier'); ?>
             <input type="hidden" name="tier_id" value="<?php echo esc_attr($editing_tier_id); ?>">
 
@@ -697,12 +771,64 @@ foreach (array_keys($all_tiers) as $tier_id) {
 
 <script>
 // Auto-format tier ID input
-document.getElementById('tier_id').addEventListener('input', function() {
-    this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-});
+if (document.getElementById('tier_id')) {
+    document.getElementById('tier_id').addEventListener('input', function() {
+        this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    });
+}
 
 // Preview badge in real-time
-document.getElementById('tier_badge').addEventListener('input', function() {
-    console.log('Badge preview:', this.value);
-});
+if (document.getElementById('tier_badge')) {
+    document.getElementById('tier_badge').addEventListener('input', function() {
+        console.log('Badge preview:', this.value);
+    });
+}
+
+// Apply suggested settings to form
+function applySuggestedSettings(tierId) {
+    // Get suggested settings data from PHP
+    const suggestedSettings = <?php echo json_encode(cas_get_all_suggested_tier_settings()); ?>;
+
+    if (!suggestedSettings[tierId]) {
+        alert('No suggested settings found for this tier.');
+        return;
+    }
+
+    const settings = suggestedSettings[tierId];
+
+    // Apply to form fields
+    if (document.getElementById('edit_commission')) {
+        document.getElementById('edit_commission').value = settings.commission;
+    }
+    if (document.getElementById('edit_min_payout')) {
+        document.getElementById('edit_min_payout').value = settings.min_payout;
+    }
+    if (document.getElementById('edit_payment_days')) {
+        document.getElementById('edit_payment_days').value = settings.payment_days;
+    }
+    if (document.getElementById('edit_coupon_discount')) {
+        document.getElementById('edit_coupon_discount').value = settings.coupon_discount;
+    }
+    if (document.getElementById('edit_allow_code_edit')) {
+        document.getElementById('edit_allow_code_edit').checked = settings.allow_code_edit == 1;
+    }
+    if (document.getElementById('edit_allow_self_referral')) {
+        document.getElementById('edit_allow_self_referral').checked = settings.allow_self_referral == 1;
+    }
+
+    // Visual feedback
+    const form = document.getElementById('editTierFormElement');
+    if (form) {
+        form.style.border = '3px solid #10b981';
+        setTimeout(function() {
+            form.style.border = '1px solid #e5e7eb';
+        }, 2000);
+    }
+
+    // Show success message
+    alert('✓ Suggested settings have been applied! Click "Save Changes" to confirm.');
+
+    // Scroll to form
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 </script>

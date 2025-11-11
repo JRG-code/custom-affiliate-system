@@ -273,13 +273,15 @@ function cas_check_settings_status() {
 
 /**
  * Inicializar configurações padrão se não existirem
- * 
- * Esta função é chamada quando o plugin é ativado
+ *
+ * Esta função é chamada quando o plugin é ativado PELA PRIMEIRA VEZ
+ * NUNCA deve sobrescrever configurações existentes
  */
 function cas_init_default_settings() {
     $existing = get_option('cas_settings');
 
-    // Só criar se não existirem configurações
+    // CRITICAL: Só criar se não existirem configurações
+    // NUNCA sobrescrever configurações existentes do utilizador
     if (empty($existing)) {
         $defaults = array(
             'tier_1' => array(
@@ -319,7 +321,49 @@ function cas_init_default_settings() {
         );
 
         update_option('cas_settings', $defaults);
+
+        // Create initial backup
+        update_option('cas_settings_backup', $defaults);
+        update_option('cas_settings_backup_date', current_time('mysql'));
+
         return true;
+    }
+
+    return false;
+}
+
+/**
+ * Restore settings from backup
+ *
+ * @return bool True if restored, false if no backup exists
+ */
+function cas_restore_settings_from_backup() {
+    $backup = get_option('cas_settings_backup', false);
+
+    if ($backup && !empty($backup)) {
+        update_option('cas_settings', $backup);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Check if settings backup exists
+ *
+ * @return array|false Backup info or false
+ */
+function cas_get_settings_backup_info() {
+    $backup = get_option('cas_settings_backup', false);
+    $backup_date = get_option('cas_settings_backup_date', false);
+
+    if ($backup && !empty($backup)) {
+        return array(
+            'exists' => true,
+            'date' => $backup_date,
+            'tier_count' => count(array_intersect_key($backup, array_flip(array('tier_1', 'tier_2', 'ambassador')))),
+            'has_general' => isset($backup['general'])
+        );
     }
 
     return false;
@@ -797,4 +841,156 @@ function cas_get_custom_tiers() {
 function cas_count_custom_tiers() {
     $custom_tiers = get_option('cas_custom_tiers', array());
     return count($custom_tiers);
+}
+
+/**
+ * Get suggested/recommended settings for a tier
+ * These are best-practice defaults that users can apply with one click
+ *
+ * @param string $tier Tier ID
+ * @return array|null Suggested settings or null if no suggestions
+ */
+function cas_get_suggested_tier_settings($tier) {
+    $suggestions = array(
+        'tier_1' => array(
+            'commission' => 10,
+            'min_payout' => 20,
+            'payment_days' => 30,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 0,
+            'allow_self_referral' => 0
+        ),
+        'tier_2' => array(
+            'commission' => 15,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'ambassador' => array(
+            'commission' => 20,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'platinum' => array(
+            'commission' => 25,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'diamond' => array(
+            'commission' => 30,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'elite' => array(
+            'commission' => 35,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 10,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'vip' => array(
+            'commission' => 40,
+            'min_payout' => 0,
+            'payment_days' => 1,
+            'coupon_discount' => 10,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'partner' => array(
+            'commission' => 50,
+            'min_payout' => 0,
+            'payment_days' => 1,
+            'coupon_discount' => 15,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        )
+    );
+
+    return isset($suggestions[$tier]) ? $suggestions[$tier] : null;
+}
+
+/**
+ * Get all suggested tier settings (for JavaScript)
+ *
+ * @return array All tier suggestions
+ */
+function cas_get_all_suggested_tier_settings() {
+    return array(
+        'tier_1' => array(
+            'commission' => 10,
+            'min_payout' => 20,
+            'payment_days' => 30,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 0,
+            'allow_self_referral' => 0
+        ),
+        'tier_2' => array(
+            'commission' => 15,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'ambassador' => array(
+            'commission' => 20,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'platinum' => array(
+            'commission' => 25,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'diamond' => array(
+            'commission' => 30,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 5,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'elite' => array(
+            'commission' => 35,
+            'min_payout' => 0,
+            'payment_days' => 3,
+            'coupon_discount' => 10,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'vip' => array(
+            'commission' => 40,
+            'min_payout' => 0,
+            'payment_days' => 1,
+            'coupon_discount' => 10,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        ),
+        'partner' => array(
+            'commission' => 50,
+            'min_payout' => 0,
+            'payment_days' => 1,
+            'coupon_discount' => 15,
+            'allow_code_edit' => 1,
+            'allow_self_referral' => 1
+        )
+    );
 }

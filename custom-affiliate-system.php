@@ -106,7 +106,25 @@ class Custom_Affiliate_System {
     public function activate() {
         $this->create_tables();
         $this->create_pages();
-        cas_init_default_settings();
+
+        // IMPORTANT: Only initialize settings on FIRST activation, never on updates
+        $plugin_version = get_option('cas_plugin_version', false);
+
+        if ($plugin_version === false) {
+            // First time activation - initialize default settings
+            cas_init_default_settings();
+            update_option('cas_plugin_version', CAS_VERSION);
+        } else {
+            // Plugin update - preserve existing settings and just update version
+            update_option('cas_plugin_version', CAS_VERSION);
+
+            // Backup current settings (in case user needs to restore)
+            $current_settings = get_option('cas_settings', array());
+            if (!empty($current_settings)) {
+                update_option('cas_settings_backup', $current_settings);
+                update_option('cas_settings_backup_date', current_time('mysql'));
+            }
+        }
 
         // Schedule automatic payouts
         cas_schedule_automatic_payouts();
