@@ -1,16 +1,10 @@
 <?php
 /**
- * Tier Management Page (Pro Only)
- * Create, edit, and delete custom affiliate tiers
+ * Tier Management Page
+ * Edit existing tiers (FREE) and create custom tiers (PRO)
  */
 
 if (!defined('ABSPATH')) exit;
-
-// Check if Pro is active
-if (!cas_is_pro_active()) {
-    echo cas_upgrade_notice('Custom Tier Management');
-    return;
-}
 
 global $wpdb;
 
@@ -507,8 +501,28 @@ foreach (array_keys($all_tiers) as $tier_id) {
 
     <!-- Create New Tier Form -->
     <div id="createTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2>➕ Create New Tier</h2>
-        
+        <h2>➕ Create New Tier <?php if (!cas_is_pro_active()) echo cas_pro_badge(); ?></h2>
+
+        <?php if (!cas_is_pro_active()): ?>
+            <!-- PRO Upgrade Notice -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; text-align: center;">
+                <div style="font-size: 64px; margin-bottom: 20px;">👑</div>
+                <h3 style="margin: 0 0 15px 0; color: white; font-size: 24px;">Create Custom Tiers with PRO</h3>
+                <p style="margin: 0 0 25px 0; opacity: 0.95; font-size: 16px;">
+                    Unlock the ability to create unlimited custom tiers with unique commission rates, badges, and settings.
+                </p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 25px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Unlimited Custom Tiers</span>
+                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Custom Badges & Names</span>
+                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Flexible Commission Rates</span>
+                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Advanced Features</span>
+                </div>
+                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="background: white; color: #667eea; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                    Upgrade to PRO →
+                </a>
+            </div>
+        <?php else: ?>
+
         <form method="post" action="">
             <?php wp_nonce_field('cas_create_tier'); ?>
             
@@ -616,6 +630,8 @@ foreach (array_keys($all_tiers) as $tier_id) {
                 </button>
             </p>
         </form>
+
+        <?php endif; ?>
     </div>
     
     <!-- Tips -->
