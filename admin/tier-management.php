@@ -307,10 +307,9 @@ $backup_info = cas_get_settings_backup_info();
 <div class="wrap">
     <h1>🎯 Tier Management <?php echo cas_pro_badge(); ?></h1>
 
-    <!-- Settings Backup Notice -->
     <?php if ($backup_info): ?>
-    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="cas-backup-notice">
+        <div class="cas-backup-notice-flex">
             <div>
                 <strong style="color: #856404;">📦 Settings Backup Available</strong>
                 <p style="margin: 5px 0 0 0; color: #856404; font-size: 13px;">
@@ -320,56 +319,50 @@ $backup_info = cas_get_settings_backup_info();
             </div>
             <form method="post" style="margin: 0;">
                 <?php wp_nonce_field('cas_restore_backup'); ?>
-                <button type="submit" name="restore_settings_backup" class="button" onclick="return confirm('Restore tier settings from backup? This will overwrite your current settings.');">
-                    ⟲ Restore Backup
-                </button>
+                <button type="submit" name="restore_settings_backup" class="button" onclick="return confirm('Restore tier settings from backup? This will overwrite your current settings.');">⟲ Restore Backup</button>
             </form>
         </div>
     </div>
     <?php endif; ?>
-    
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin: 20px 0;">
+
+    <div class="cas-settings-header">
         <h2 style="margin: 0 0 10px 0; color: white;">Create Custom Tiers</h2>
         <p style="margin: 0; opacity: 0.9;">Design unlimited tiers with custom names, badges, and commission structures to match your affiliate program.</p>
     </div>
-    
-    <!-- Existing Tiers -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2>Existing Tiers</h2>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-            <?php foreach ($all_tiers as $tier_id => $tier_data): 
+    <div class="cas-white-box">
+        <h2>Existing Tiers</h2>
+        <div class="cas-tier-grid">
+            <?php foreach ($all_tiers as $tier_id => $tier_data):
                 $is_default = in_array($tier_id, array('tier_1', 'tier_2', 'ambassador'));
                 $settings = cas_get_all_tier_settings($tier_id);
                 $usage = $tier_usage[$tier_id] ?? 0;
             ?>
-            <div style="border: 2px solid <?php echo cas_get_tier_color($tier_id); ?>; padding: 20px; border-radius: 12px; position: relative;">
+            <div class="cas-tier-card" style="border-color: <?php echo cas_get_tier_color($tier_id); ?>;">
                 <?php if ($is_default): ?>
-                <span style="position: absolute; top: 10px; right: 10px; background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">DEFAULT</span>
+                <span class="cas-tier-badge-default">DEFAULT</span>
                 <?php endif; ?>
-                
+
                 <div style="font-size: 36px; margin-bottom: 10px;"><?php echo esc_html($tier_data['badge']); ?></div>
                 <h3 style="margin: 0 0 10px 0; color: <?php echo cas_get_tier_color($tier_id); ?>;"><?php echo esc_html($tier_data['name']); ?></h3>
-                
-                <div style="margin: 15px 0; padding: 15px; background: #f9fafb; border-radius: 6px;">
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Commission:</strong> <?php echo $settings['commission']; ?>%</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
+
+                <div class="cas-tier-details">
+                    <p><strong>Commission:</strong> <?php echo $settings['commission']; ?>%</p>
+                    <p><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
+                    <p><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
+                    <p><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
+                    <p><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
+                    <p><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
                 </div>
-                
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+
+                <div class="cas-tier-stats">
                     <p style="margin: 0; font-size: 13px; color: #666;">
                         <strong><?php echo $usage; ?></strong> affiliate<?php echo $usage != 1 ? 's' : ''; ?> using this tier
                     </p>
                 </div>
 
-                <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <a href="?page=affiliate-tiers&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">
-                        ⚙️ Edit
-                    </a>
+                <div class="cas-tier-actions">
+                    <a href="?page=affiliate-tiers&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">⚙️ Edit</a>
 
                     <?php if (!$is_default): ?>
                     <form method="post" style="flex: 1; margin: 0;" onsubmit="return confirm('Delete this tier? This cannot be undone.');">
