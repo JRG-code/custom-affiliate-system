@@ -1185,6 +1185,21 @@ class Custom_Affiliate_System {
         if ($pagenow === 'edit.php' && $typenow === 'shop_coupon') {
             global $wpdb;
 
+            // Show permanent info notice about how to remove affiliates correctly
+            ?>
+            <div class="notice notice-info">
+                <p>
+                    <strong>ℹ️ How to Remove an Affiliate's Coupon</strong><br>
+                    <strong style="color: #d63638;">⚠️ Do NOT delete affiliate coupons directly here!</strong> If you delete a coupon but the affiliate is still active, it will be recreated during the next sync.<br><br>
+                    <strong>✅ Correct process to remove an affiliate:</strong><br>
+                    &nbsp;&nbsp;1️⃣ Go to <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>"><strong>Affiliate System → Affiliates</strong></a><br>
+                    &nbsp;&nbsp;2️⃣ <strong>Deactivate</strong> the affiliate (stops commissions, keeps history) OR <strong>Delete</strong> the affiliate (removes everything)<br>
+                    &nbsp;&nbsp;3️⃣ Then, if needed, delete the coupon here in WooCommerce<br><br>
+                    <strong>📌 Why this order?</strong> The affiliate system manages coupons automatically. Deleting only the coupon breaks the sync and may cause issues with commission tracking.
+                </p>
+            </div>
+            <?php
+
             // Check for affiliates without coupons
             $affiliates_without_coupons = $wpdb->get_results("
                 SELECT a.*, u.display_name, u.user_email
