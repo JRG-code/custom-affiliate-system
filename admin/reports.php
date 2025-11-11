@@ -220,25 +220,22 @@ foreach ($code_requests as $req) {
     <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>" class="page-title-action">Back to Overview</a>
     <hr class="wp-header-end">
 
-    <!-- ========== SECTION 1: PAYOUTS ========== -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 30px 0;">
-        <h2 style="margin: 0 0 20px 0;">💰 Payout Requests
+    <div class="cas-reports-section">
+        <h2>💰 Payout Requests
             <?php if ($pending_payouts > 0): ?>
                 <span class="update-plugins count-<?php echo $pending_payouts; ?>"><span class="update-count"><?php echo $pending_payouts; ?></span></span>
             <?php endif; ?>
         </h2>
 
         <?php if ($pending_payouts > 0): ?>
-        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 0 0 20px 0; border-radius: 4px;">
-            <p style="margin: 0; font-weight: 600; color: #92400e;">
-                ⚠️ You have <strong><?php echo $pending_payouts; ?></strong> pending request<?php echo $pending_payouts > 1 ? 's' : ''; ?> totaling <strong>€<?php echo number_format($pending_payout_total, 2); ?></strong>
-            </p>
+        <div class="cas-reports-warning">
+            <p>⚠️ You have <strong><?php echo $pending_payouts; ?></strong> pending request<?php echo $pending_payouts > 1 ? 's' : ''; ?> totaling <strong>€<?php echo number_format($pending_payout_total, 2); ?></strong></p>
         </div>
         <?php endif; ?>
 
         <?php if (empty($payouts)): ?>
-        <div style="text-align: center; padding: 40px;">
-            <p style="color: #9ca3af; font-size: 16px;">No payout requests yet.</p>
+        <div class="cas-reports-empty">
+            <p>No payout requests yet.</p>
         </div>
         <?php else: ?>
         <table class="wp-list-table widefat fixed striped">
@@ -254,8 +251,14 @@ foreach ($code_requests as $req) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($payouts as $payout): ?>
-                <tr style="<?php echo $payout->status === 'pending' ? 'background: #fef3c7;' : ''; ?>">
+                <?php foreach ($payouts as $payout):
+                    $status_class = 'cas-status-badge ';
+                    if ($payout->status === 'pending') $status_class .= 'cas-status-pending';
+                    elseif ($payout->status === 'paid') $status_class .= 'cas-status-paid';
+                    elseif ($payout->status === 'rejected') $status_class .= 'cas-status-rejected';
+                    elseif ($payout->status === 'approved') $status_class .= 'cas-status-approved';
+                ?>
+                <tr class="<?php echo $payout->status === 'pending' ? 'cas-row-pending' : ''; ?>">
                     <td>
                         <strong><?php echo esc_html($payout->display_name); ?></strong><br>
                         <small><?php echo esc_html($payout->user_email); ?></small>
@@ -265,22 +268,18 @@ foreach ($code_requests as $req) {
                     <td><?php echo esc_html(ucfirst($payout->method)); ?></td>
                     <td><?php echo date('d/m/Y', strtotime($payout->request_date)); ?></td>
                     <td>
-                        <?php
-                        $colors = array('pending' => '#fbbf24', 'paid' => '#10b981', 'rejected' => '#ef4444');
-                        $color = $colors[$payout->status] ?? '#6b7280';
-                        ?>
-                        <span style="background: <?php echo $color; ?>; color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                        <span class="<?php echo $status_class; ?>">
                             <?php echo esc_html($payout->status); ?>
                         </span>
                     </td>
                     <td>
                         <?php if ($payout->status === 'pending'): ?>
-                            <form method="post" style="display: inline;">
+                            <form method="post" class="cas-inline-form">
                                 <?php wp_nonce_field('approve_payout_nonce'); ?>
                                 <input type="hidden" name="payout_id" value="<?php echo $payout->id; ?>">
                                 <button type="submit" name="approve_payout" class="button button-primary button-small">✓ Approve</button>
                             </form>
-                            <form method="post" style="display: inline;">
+                            <form method="post" class="cas-inline-form">
                                 <?php wp_nonce_field('reject_payout_nonce'); ?>
                                 <input type="hidden" name="payout_id" value="<?php echo $payout->id; ?>">
                                 <button type="submit" name="reject_payout" class="button button-small" onclick="return confirm('Reject this payout?')">✗ Reject</button>
@@ -296,17 +295,16 @@ foreach ($code_requests as $req) {
         <?php endif; ?>
     </div>
 
-    <!-- ========== SECTION 2: CODE CHANGE REQUESTS ========== -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 30px 0;">
-        <h2 style="margin: 0 0 20px 0;">🔄 Code Change Requests
+    <div class="cas-reports-section">
+        <h2>🔄 Code Change Requests
             <?php if ($pending_code_changes > 0): ?>
                 <span class="update-plugins count-<?php echo $pending_code_changes; ?>"><span class="update-count"><?php echo $pending_code_changes; ?></span></span>
             <?php endif; ?>
         </h2>
 
         <?php if (empty($code_requests)): ?>
-        <div style="text-align: center; padding: 40px;">
-            <p style="color: #9ca3af; font-size: 16px;">No code change requests yet.</p>
+        <div class="cas-reports-empty">
+            <p>No code change requests yet.</p>
         </div>
         <?php else: ?>
         <table class="wp-list-table widefat fixed striped">
@@ -323,21 +321,22 @@ foreach ($code_requests as $req) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($code_requests as $request): ?>
-                <tr style="<?php echo $request->status === 'pending' ? 'background: #fff3cd;' : ''; ?>">
+                <?php foreach ($code_requests as $request):
+                    $status_class = 'cas-status-badge ';
+                    if ($request->status === 'pending') $status_class .= 'cas-status-pending';
+                    elseif ($request->status === 'approved') $status_class .= 'cas-status-approved';
+                    elseif ($request->status === 'denied') $status_class .= 'cas-status-rejected';
+                ?>
+                <tr class="<?php echo $request->status === 'pending' ? 'cas-row-code-pending' : ''; ?>">
                     <td>
                         <strong><?php echo esc_html($request->display_name); ?></strong><br>
                         <small><?php echo esc_html($request->user_email); ?></small>
                     </td>
                     <td>
-                        <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
-                            <?php echo esc_html($request->old_code); ?>
-                        </code>
+                        <code class="cas-code-old"><?php echo esc_html($request->old_code); ?></code>
                     </td>
                     <td>
-                        <code style="background: #d1fae5; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: #065f46;">
-                            <?php echo esc_html($request->new_code); ?>
-                        </code>
+                        <code class="cas-code-new"><?php echo esc_html($request->new_code); ?></code>
                     </td>
                     <td><?php echo esc_html(cas_get_tier_name($request->tier)); ?></td>
                     <td>
@@ -350,26 +349,14 @@ foreach ($code_requests as $req) {
                     </td>
                     <td><?php echo date('d/m/Y H:i', strtotime($request->requested_at)); ?></td>
                     <td>
-                        <?php
-                        $status_colors = array(
-                            'pending' => '#fbbf24',
-                            'approved' => '#10b981',
-                            'denied' => '#ef4444'
-                        );
-                        $color = $status_colors[$request->status] ?? '#6b7280';
-                        ?>
-                        <span style="background: <?php echo $color; ?>; color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                        <span class="<?php echo $status_class; ?>">
                             <?php echo esc_html($request->status); ?>
                         </span>
                     </td>
                     <td>
                         <?php if ($request->status === 'pending'): ?>
-                            <button onclick="openReviewModal(<?php echo $request->id; ?>, 'approve', '<?php echo esc_js($request->new_code); ?>')" class="button button-primary button-small">
-                                ✓ Approve
-                            </button>
-                            <button onclick="openReviewModal(<?php echo $request->id; ?>, 'deny', '<?php echo esc_js($request->new_code); ?>')" class="button button-small">
-                                ✗ Deny
-                            </button>
+                            <button onclick="openReviewModal(<?php echo $request->id; ?>, 'approve', '<?php echo esc_js($request->new_code); ?>')" class="button button-primary button-small">✓ Approve</button>
+                            <button onclick="openReviewModal(<?php echo $request->id; ?>, 'deny', '<?php echo esc_js($request->new_code); ?>')" class="button button-small">✗ Deny</button>
                         <?php else: ?>
                             <span style="color: #9ca3af;">Reviewed</span>
                             <?php if ($request->admin_notes): ?>

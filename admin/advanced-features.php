@@ -54,16 +54,14 @@ $template = get_option('cas_welcome_email_template', array(
     <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>" class="page-title-action">Back to Overview</a>
     <hr class="wp-header-end">
 
-    <!-- PRO Active Banner -->
-    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0;">
-        <h2 style="margin: 0 0 5px 0; color: white;">✓ PRO Features Unlocked</h2>
-        <p style="margin: 0; opacity: 0.9;">You have access to all advanced customization options.</p>
+    <div class="cas-pro-active-banner">
+        <h2>✓ PRO Features Unlocked</h2>
+        <p>You have access to all advanced customization options.</p>
     </div>
 
-    <!-- Welcome Email Customization -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2 style="margin: 0 0 10px 0;">📧 Welcome Email Template</h2>
-        <p style="color: #666; margin: 0 0 20px 0;">Customize the email that customers receive when they become affiliates.</p>
+    <div class="cas-email-box">
+        <h2>📧 Welcome Email Template</h2>
+        <p>Customize the email that customers receive when they become affiliates.</p>
 
         <form method="post" action="">
             <?php wp_nonce_field('cas_save_email_template'); ?>
@@ -128,19 +126,18 @@ $template = get_option('cas_welcome_email_template', array(
                 </tr>
             </table>
 
-            <!-- Available Variables -->
-            <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                <h3 style="margin: 0 0 15px 0; color: #0c4a6e;">📋 Available Variables</h3>
-                <p style="margin: 0 0 10px 0; color: #0c4a6e;">You can use these placeholders in your email content:</p>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{affiliate_name}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{affiliate_code}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{commission_rate}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{tier_name}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{tier_badge}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{coupon_discount}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{support_email}</code>
-                    <code style="background: white; padding: 8px 12px; border-radius: 4px; display: block;">{dashboard_url}</code>
+            <div class="cas-variables-box">
+                <h3>📋 Available Variables</h3>
+                <p>You can use these placeholders in your email content:</p>
+                <div class="cas-variables-grid">
+                    <code>{affiliate_name}</code>
+                    <code>{affiliate_code}</code>
+                    <code>{commission_rate}</code>
+                    <code>{tier_name}</code>
+                    <code>{tier_badge}</code>
+                    <code>{coupon_discount}</code>
+                    <code>{support_email}</code>
+                    <code>{dashboard_url}</code>
                 </div>
             </div>
 
@@ -155,29 +152,26 @@ $template = get_option('cas_welcome_email_template', array(
         </form>
     </div>
 
-    <!-- Email Preview -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+    <div class="cas-email-box">
         <h2 style="margin: 0 0 20px 0;">👁️ Email Preview</h2>
 
-        <div style="background: #f9fafb; padding: 30px; border-radius: 8px; font-family: Arial, sans-serif;">
-            <h2 style="color: #667eea; margin: 0 0 20px 0;"><?php echo esc_html($template['heading']); ?></h2>
+        <div class="cas-email-preview">
+            <h2><?php echo esc_html($template['heading']); ?></h2>
 
-            <div style="background: #f0f0f0; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px;">
+            <div class="cas-email-code-box">
                 <h1 style="color: #667eea; font-size: 36px; margin: 0;">EXAMPLECODE</h1>
                 <p style="margin: 10px 0 0 0;">Your unique promotional code</p>
             </div>
 
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <div class="cas-email-content">
                 <?php echo wpautop($template['message']); ?>
             </div>
 
-            <p style="text-align: center; margin: 30px 0;">
-                <a href="#" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                    <?php echo esc_html($template['button_text']); ?>
-                </a>
-            </p>
+            <div class="cas-email-button">
+                <a href="#"><?php echo esc_html($template['button_text']); ?></a>
+            </div>
 
-            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+            <div class="cas-email-footer">
                 <?php echo wpautop($template['footer_text']); ?>
             </div>
         </div>
@@ -185,10 +179,9 @@ $template = get_option('cas_welcome_email_template', array(
         <p style="color: #666; font-size: 13px; margin-top: 15px;"><em>Note: This is a preview. Variables like {affiliate_name} will be replaced with actual data in the real email.</em></p>
     </div>
 
-    <!-- More Features Coming Soon -->
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 20px 0;">
-        <h3 style="margin: 0 0 10px 0; color: #92400e;">🚧 More Advanced Features Coming Soon!</h3>
-        <p style="margin: 0; color: #92400e;">We're working on additional customization options for PRO users. Stay tuned!</p>
+    <div class="cas-coming-soon">
+        <h3>🚧 More Advanced Features Coming Soon!</h3>
+        <p>We're working on additional customization options for PRO users. Stay tuned!</p>
     </div>
 </div>
 
