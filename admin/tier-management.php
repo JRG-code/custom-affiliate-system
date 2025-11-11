@@ -277,6 +277,15 @@ if (isset($_POST['delete_tier']) && check_admin_referer('cas_delete_tier')) {
     }
 }
 
+// Handle restore backup
+if (isset($_POST['restore_settings_backup']) && check_admin_referer('cas_restore_backup')) {
+    if (cas_restore_settings_from_backup()) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Settings have been restored from backup.</p></div>';
+    } else {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>❌ Error:</strong> No backup found or backup is empty.</p></div>';
+    }
+}
+
 // Get all tiers (default + custom)
 $all_tiers = cas_get_available_tiers();
 $custom_tiers_only = get_option('cas_custom_tiers', array());
@@ -290,53 +299,70 @@ foreach (array_keys($all_tiers) as $tier_id) {
     ));
 }
 
+// Check if backup exists
+$backup_info = cas_get_settings_backup_info();
+
 ?>
 
 <div class="wrap">
     <h1>🎯 Tier Management <?php echo cas_pro_badge(); ?></h1>
-    
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin: 20px 0;">
+
+    <?php if ($backup_info): ?>
+    <div class="cas-backup-notice">
+        <div class="cas-backup-notice-flex">
+            <div>
+                <strong style="color: #856404;">📦 Settings Backup Available</strong>
+                <p style="margin: 5px 0 0 0; color: #856404; font-size: 13px;">
+                    A backup of your tier settings was created on <?php echo date('F j, Y \a\t g:i a', strtotime($backup_info['date'])); ?>.
+                    If your settings were accidentally changed, you can restore them.
+                </p>
+            </div>
+            <form method="post" style="margin: 0;">
+                <?php wp_nonce_field('cas_restore_backup'); ?>
+                <button type="submit" name="restore_settings_backup" class="button" onclick="return confirm('Restore tier settings from backup? This will overwrite your current settings.');">⟲ Restore Backup</button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="cas-settings-header">
         <h2 style="margin: 0 0 10px 0; color: white;">Create Custom Tiers</h2>
         <p style="margin: 0; opacity: 0.9;">Design unlimited tiers with custom names, badges, and commission structures to match your affiliate program.</p>
     </div>
-    
-    <!-- Existing Tiers -->
-    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2>Existing Tiers</h2>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-            <?php foreach ($all_tiers as $tier_id => $tier_data): 
+    <div class="cas-white-box">
+        <h2>Existing Tiers</h2>
+        <div class="cas-tier-grid">
+            <?php foreach ($all_tiers as $tier_id => $tier_data):
                 $is_default = in_array($tier_id, array('tier_1', 'tier_2', 'ambassador'));
                 $settings = cas_get_all_tier_settings($tier_id);
                 $usage = $tier_usage[$tier_id] ?? 0;
             ?>
-            <div style="border: 2px solid <?php echo cas_get_tier_color($tier_id); ?>; padding: 20px; border-radius: 12px; position: relative;">
+            <div class="cas-tier-card" style="border-color: <?php echo cas_get_tier_color($tier_id); ?>;">
                 <?php if ($is_default): ?>
-                <span style="position: absolute; top: 10px; right: 10px; background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">DEFAULT</span>
+                <span class="cas-tier-badge-default">DEFAULT</span>
                 <?php endif; ?>
-                
+
                 <div style="font-size: 36px; margin-bottom: 10px;"><?php echo esc_html($tier_data['badge']); ?></div>
                 <h3 style="margin: 0 0 10px 0; color: <?php echo cas_get_tier_color($tier_id); ?>;"><?php echo esc_html($tier_data['name']); ?></h3>
-                
-                <div style="margin: 15px 0; padding: 15px; background: #f9fafb; border-radius: 6px;">
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Commission:</strong> <?php echo $settings['commission']; ?>%</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
-                    <p style="margin: 5px 0; font-size: 13px;"><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
+
+                <div class="cas-tier-details">
+                    <p><strong>Commission:</strong> <?php echo $settings['commission']; ?>%</p>
+                    <p><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
+                    <p><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
+                    <p><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
+                    <p><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
+                    <p><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
                 </div>
-                
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+
+                <div class="cas-tier-stats">
                     <p style="margin: 0; font-size: 13px; color: #666;">
                         <strong><?php echo $usage; ?></strong> affiliate<?php echo $usage != 1 ? 's' : ''; ?> using this tier
                     </p>
                 </div>
 
-                <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <a href="?page=affiliate-tiers&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">
-                        ⚙️ Edit
-                    </a>
+                <div class="cas-tier-actions">
+                    <a href="?page=affiliate-tiers&edit_tier=<?php echo esc_attr($tier_id); ?>#editTierForm" class="button" style="flex: 1; text-align: center;">⚙️ Edit</a>
 
                     <?php if (!$is_default): ?>
                     <form method="post" style="flex: 1; margin: 0;" onsubmit="return confirm('Delete this tier? This cannot be undone.');">
@@ -351,30 +377,63 @@ foreach (array_keys($all_tiers) as $tier_id) {
             </div>
             <?php endforeach; ?>
             
-            <!-- Add New Tier Card -->
-            <div style="border: 2px dashed #d1d5db; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; cursor: pointer;" onclick="document.getElementById('createTierForm').scrollIntoView({behavior: 'smooth'});">
+            <div class="cas-tier-create" onclick="document.getElementById('createTierForm').scrollIntoView({behavior: 'smooth'});">
                 <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">➕</div>
                 <h3 style="margin: 0; color: #6b7280;">Create New Tier</h3>
                 <p style="margin: 10px 0 0 0; color: #9ca3af; font-size: 13px;">Click to add a custom tier</p>
             </div>
         </div>
     </div>
-    
-    <!-- Edit Tier Form -->
+
     <?php
     $editing_tier_id = isset($_GET['edit_tier']) ? sanitize_key($_GET['edit_tier']) : '';
     if (!empty($editing_tier_id) && isset($all_tiers[$editing_tier_id])):
         $editing_tier = $all_tiers[$editing_tier_id];
         $editing_settings = cas_get_all_tier_settings($editing_tier_id);
         $is_default_tier = in_array($editing_tier_id, array('tier_1', 'tier_2', 'ambassador'));
+        $suggested_settings = cas_get_suggested_tier_settings($editing_tier_id);
     ?>
-    <div id="editTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea;">
+
+    <?php if ($suggested_settings): ?>
+    <div class="cas-suggestion-box">
+        <div class="cas-suggestion-header">
+            <h3 style="margin: 0; color: #0c4a6e;">💡 Suggested Settings for <?php echo esc_html($editing_tier['name']); ?></h3>
+            <button type="button" class="button button-primary" onclick="applySuggestedSettings('<?php echo esc_js($editing_tier_id); ?>')">✓ Accept Suggestion</button>
+        </div>
+
+        <div class="cas-suggestion-grid">
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Commission:</strong> <?php echo $suggested_settings['commission']; ?>%
+            </div>
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Min Payout:</strong> <?php echo $suggested_settings['min_payout'] > 0 ? $suggested_settings['min_payout'] . '€' : 'No minimum'; ?>
+            </div>
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Payment Days:</strong> <?php echo $suggested_settings['payment_days']; ?> days
+            </div>
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Coupon Discount:</strong> <?php echo $suggested_settings['coupon_discount']; ?>€
+            </div>
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Code Edit:</strong> <?php echo $suggested_settings['allow_code_edit'] ? '✓ Allowed' : '✗ Not allowed'; ?>
+            </div>
+            <div class="cas-suggestion-item">
+                <strong style="color: #0c4a6e;">Self-Referral:</strong> <?php echo $suggested_settings['allow_self_referral'] ? '✓ Allowed' : '✗ Blocked'; ?>
+            </div>
+        </div>
+        <p style="margin: 15px 0 0 0; font-size: 13px; color: #0c4a6e;">
+            <strong>Note:</strong> These are recommended best-practice settings. Click "Accept Suggestion" to apply them, or manually configure below.
+        </p>
+    </div>
+    <?php endif; ?>
+
+    <div id="editTierForm" class="cas-white-box-border">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">⚙️ Edit Tier: <?php echo esc_html($editing_tier['name']); ?></h2>
             <a href="?page=affiliate-tiers" class="button">✕ Cancel</a>
         </div>
 
-        <form method="post" action="">
+        <form method="post" action="" id="editTierFormElement">
             <?php wp_nonce_field('cas_edit_tier'); ?>
             <input type="hidden" name="tier_id" value="<?php echo esc_attr($editing_tier_id); ?>">
 
@@ -499,27 +558,23 @@ foreach (array_keys($all_tiers) as $tier_id) {
     </div>
     <?php endif; ?>
 
-    <!-- Create New Tier Form -->
-    <div id="createTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+    <div id="createTierForm" class="cas-white-box">
         <h2>➕ Create New Tier <?php if (!cas_is_pro_active()) echo cas_pro_badge(); ?></h2>
 
         <?php if (!cas_is_pro_active()): ?>
-            <!-- PRO Upgrade Notice -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; text-align: center;">
+            <div class="cas-pro-upgrade">
                 <div style="font-size: 64px; margin-bottom: 20px;">👑</div>
-                <h3 style="margin: 0 0 15px 0; color: white; font-size: 24px;">Create Custom Tiers with PRO</h3>
+                <h3 class="cas-pro-upgrade h3">Create Custom Tiers with PRO</h3>
                 <p style="margin: 0 0 25px 0; opacity: 0.95; font-size: 16px;">
                     Unlock the ability to create unlimited custom tiers with unique commission rates, badges, and settings.
                 </p>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 25px;">
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Unlimited Custom Tiers</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Custom Badges & Names</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Flexible Commission Rates</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Advanced Features</span>
+                <div class="cas-pro-features">
+                    <span class="cas-pro-feature">✓ Unlimited Custom Tiers</span>
+                    <span class="cas-pro-feature">✓ Custom Badges & Names</span>
+                    <span class="cas-pro-feature">✓ Flexible Commission Rates</span>
+                    <span class="cas-pro-feature">✓ Advanced Features</span>
                 </div>
-                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="background: white; color: #667eea; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                    Upgrade to PRO →
-                </a>
+                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="background: white; color: #667eea; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">Upgrade to PRO →</a>
             </div>
         <?php else: ?>
 
@@ -634,10 +689,9 @@ foreach (array_keys($all_tiers) as $tier_id) {
         <?php endif; ?>
     </div>
     
-    <!-- Tips -->
-    <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0;">
-        <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">💡 Tips for Creating Tiers</h3>
-        <ul style="margin: 10px 0; padding-left: 20px; color: #0c4a6e;">
+    <div class="cas-tips-box">
+        <h3>💡 Tips for Creating Tiers</h3>
+        <ul>
             <li><strong>Progressive Structure:</strong> Higher tiers should offer better commission rates and benefits</li>
             <li><strong>Clear Names:</strong> Use recognizable tier names like Platinum, Diamond, Elite, VIP</li>
             <li><strong>Meaningful Badges:</strong> Choose emojis that represent the tier level (💎 💫 🌟 👑 ⭐)</li>
@@ -646,9 +700,8 @@ foreach (array_keys($all_tiers) as $tier_id) {
             <li><strong>Migration Path:</strong> Plan how affiliates can progress from lower to higher tiers</li>
         </ul>
     </div>
-    
-    <!-- Tier ID Examples -->
-    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+
+    <div class="cas-white-box">
         <h3 style="margin: 0 0 15px 0;">📋 Suggested Tier IDs & Names</h3>
         <table class="wp-list-table widefat">
             <thead>
@@ -697,12 +750,64 @@ foreach (array_keys($all_tiers) as $tier_id) {
 
 <script>
 // Auto-format tier ID input
-document.getElementById('tier_id').addEventListener('input', function() {
-    this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-});
+if (document.getElementById('tier_id')) {
+    document.getElementById('tier_id').addEventListener('input', function() {
+        this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    });
+}
 
 // Preview badge in real-time
-document.getElementById('tier_badge').addEventListener('input', function() {
-    console.log('Badge preview:', this.value);
-});
+if (document.getElementById('tier_badge')) {
+    document.getElementById('tier_badge').addEventListener('input', function() {
+        console.log('Badge preview:', this.value);
+    });
+}
+
+// Apply suggested settings to form
+function applySuggestedSettings(tierId) {
+    // Get suggested settings data from PHP
+    const suggestedSettings = <?php echo json_encode(cas_get_all_suggested_tier_settings()); ?>;
+
+    if (!suggestedSettings[tierId]) {
+        alert('No suggested settings found for this tier.');
+        return;
+    }
+
+    const settings = suggestedSettings[tierId];
+
+    // Apply to form fields
+    if (document.getElementById('edit_commission')) {
+        document.getElementById('edit_commission').value = settings.commission;
+    }
+    if (document.getElementById('edit_min_payout')) {
+        document.getElementById('edit_min_payout').value = settings.min_payout;
+    }
+    if (document.getElementById('edit_payment_days')) {
+        document.getElementById('edit_payment_days').value = settings.payment_days;
+    }
+    if (document.getElementById('edit_coupon_discount')) {
+        document.getElementById('edit_coupon_discount').value = settings.coupon_discount;
+    }
+    if (document.getElementById('edit_allow_code_edit')) {
+        document.getElementById('edit_allow_code_edit').checked = settings.allow_code_edit == 1;
+    }
+    if (document.getElementById('edit_allow_self_referral')) {
+        document.getElementById('edit_allow_self_referral').checked = settings.allow_self_referral == 1;
+    }
+
+    // Visual feedback
+    const form = document.getElementById('editTierFormElement');
+    if (form) {
+        form.style.border = '3px solid #10b981';
+        setTimeout(function() {
+            form.style.border = '1px solid #e5e7eb';
+        }, 2000);
+    }
+
+    // Show success message
+    alert('✓ Suggested settings have been applied! Click "Save Changes" to confirm.');
+
+    // Scroll to form
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 </script>

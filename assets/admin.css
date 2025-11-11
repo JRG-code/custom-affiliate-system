@@ -64,6 +64,72 @@
 #adminmenu .toplevel_page_affiliate-system:hover .dashicons-groups:before,
 #adminmenu .toplevel_page_affiliate-system.current .dashicons-groups:before { color: #764ba2; }
 
+/* Advanced Features & Email Styles */
+.cas-pro-active-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0; }
+.cas-pro-active-banner h2 { margin: 0 0 5px 0; color: white; }
+.cas-pro-active-banner p { margin: 0; opacity: 0.9; }
+.cas-email-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; }
+.cas-email-box h2 { margin: 0 0 10px 0; }
+.cas-email-box > p { color: #666; margin: 0 0 20px 0; }
+.cas-variables-box { background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0; }
+.cas-variables-box h3 { margin: 0 0 15px 0; color: #0c4a6e; }
+.cas-variables-box p { margin: 0 0 10px 0; color: #0c4a6e; }
+.cas-variables-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; }
+.cas-variables-grid code { background: white; padding: 8px 12px; border-radius: 4px; display: block; }
+.cas-email-preview { background: #f9fafb; padding: 30px; border-radius: 8px; font-family: Arial, sans-serif; }
+.cas-email-preview h2 { color: #667eea; margin: 0 0 20px 0; }
+.cas-email-code-box { background: #f0f0f0; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px; }
+.cas-email-content { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+.cas-email-button { text-align: center; margin: 30px 0; }
+.cas-email-button a { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
+.cas-email-footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; }
+.cas-coming-soon { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 20px 0; }
+.cas-coming-soon h3 { margin: 0 0 10px 0; color: #92400e; }
+.cas-coming-soon p { margin: 0; color: #92400e; }
+
+/* Reports Page Styles */
+.cas-reports-section { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 30px 0; }
+.cas-reports-section h2 { margin: 0 0 20px 0; }
+.cas-reports-empty { text-align: center; padding: 40px; }
+.cas-reports-empty p { color: #9ca3af; font-size: 16px; }
+.cas-reports-warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 0 0 20px 0; border-radius: 4px; }
+.cas-reports-warning p { margin: 0; font-weight: 600; color: #92400e; }
+.cas-status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: white; }
+.cas-status-pending { background: #f59e0b; }
+.cas-status-approved { background: #10b981; }
+.cas-status-rejected { background: #ef4444; }
+.cas-status-paid { background: #8b5cf6; }
+.cas-row-pending { background: #fef3c7; }
+.cas-row-code-pending { background: #fff3cd; }
+.cas-inline-form { display: inline; }
+.cas-code-old { background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
+.cas-code-new { background: #d1fae5; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: #065f46; }
+
+/* Tier Management Styles */
+.cas-tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+.cas-tier-card { border: 2px solid; padding: 20px; border-radius: 12px; position: relative; }
+.cas-tier-badge-default { position: absolute; top: 10px; right: 10px; background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.cas-tier-details { margin: 15px 0; padding: 15px; background: #f9fafb; border-radius: 6px; }
+.cas-tier-details p { margin: 5px 0; font-size: 13px; }
+.cas-tier-stats { margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb; }
+.cas-tier-actions { margin-top: 15px; display: flex; gap: 10px; }
+.cas-tier-create { border: 2px dashed #d1d5db; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; cursor: pointer; }
+.cas-white-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; }
+.cas-white-box-border { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea; }
+.cas-suggestion-box { background: #f0f9ff; border: 2px solid #0284c7; padding: 25px; border-radius: 12px; margin: 20px 0; }
+.cas-suggestion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.cas-suggestion-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+.cas-suggestion-item { background: white; padding: 12px; border-radius: 6px; }
+.cas-backup-notice { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+.cas-backup-notice-flex { display: flex; justify-content: space-between; align-items: center; }
+.cas-tips-box { background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0; }
+.cas-tips-box h3 { margin: 0 0 10px 0; color: #0c4a6e; }
+.cas-tips-box ul { margin: 10px 0; padding-left: 20px; color: #0c4a6e; }
+.cas-pro-upgrade { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; }
+.cas-pro-upgrade h3 { margin: 0 0 15px 0; color: white; font-size: 24px; }
+.cas-pro-features { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 25px; }
+.cas-pro-feature { background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px; }
+
 @media (max-width: 768px) {
     .cas-settings-header { padding: 20px; }
     .cas-settings-page .form-table, .cas-email-page .form-table { padding: 15px; }
@@ -71,4 +137,6 @@
     .cas-email-page .form-table th, .cas-email-page .form-table td { display: block; width: 100%; padding: 10px 0; }
     .cas-settings-page .form-table td input, .cas-settings-page .form-table td select,
     .cas-email-page .form-table td input, .cas-email-page .form-table td select { width: 100%; }
+    .cas-tier-grid { grid-template-columns: 1fr; }
+    .cas-suggestion-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }

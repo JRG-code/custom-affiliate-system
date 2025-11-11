@@ -106,7 +106,25 @@ class Custom_Affiliate_System {
     public function activate() {
         $this->create_tables();
         $this->create_pages();
-        cas_init_default_settings();
+
+        // IMPORTANT: Only initialize settings on FIRST activation, never on updates
+        $plugin_version = get_option('cas_plugin_version', false);
+
+        if ($plugin_version === false) {
+            // First time activation - initialize default settings
+            cas_init_default_settings();
+            update_option('cas_plugin_version', CAS_VERSION);
+        } else {
+            // Plugin update - preserve existing settings and just update version
+            update_option('cas_plugin_version', CAS_VERSION);
+
+            // Backup current settings (in case user needs to restore)
+            $current_settings = get_option('cas_settings', array());
+            if (!empty($current_settings)) {
+                update_option('cas_settings_backup', $current_settings);
+                update_option('cas_settings_backup_date', current_time('mysql'));
+            }
+        }
 
         // Schedule automatic payouts
         cas_schedule_automatic_payouts();
@@ -237,6 +255,7 @@ class Custom_Affiliate_System {
         add_action('wp_ajax_request_code_change', array($this, 'handle_code_change_request'));
         add_action('wp_ajax_toggle_affiliate_status', array($this, 'toggle_status_ajax'));
         add_action('wp_ajax_export_affiliate_data', array($this, 'export_data'));
+        add_action('wp_ajax_cas_send_test_welcome_email', array($this, 'send_test_welcome_email'));
 
         // Scheduled email hook (10-second delay)
         add_action('cas_send_welcome_email', array($this, 'send_welcome_email_scheduled'), 10, 2);
@@ -964,6 +983,85 @@ class Custom_Affiliate_System {
         wp_mail($admin_email, $subject, $message, $headers);
 
         wp_send_json_success('Request submitted successfully! An administrator will review it shortly.');
+    }
+
+    public function send_test_welcome_email() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $admin_email = get_option('admin_email');
+        $user = wp_get_current_user();
+
+        // Get custom template or use defaults
+        $template = get_option('cas_welcome_email_template', array(
+            'subject' => 'Welcome to Our Affiliate Program!',
+            'heading' => 'Welcome to the Influencer Program!',
+            'message' => "<p>Hello <strong>{affiliate_name}</strong>,</p>\n<p>You've been added to our affiliate program!</p>\n<p>You earn <strong>{commission_rate}%</strong> commission on every sale made with your code!</p>",
+            'button_text' => 'Go to Dashboard',
+            'footer_text' => '<p style="font-size: 12px; color: #666; margin-top: 30px;">Questions? Contact us at {support_email}</p>'
+        ));
+
+        // Replace variables with test data
+        $vars = array(
+            '{affiliate_name}' => $user->display_name,
+            '{affiliate_code}' => 'TESTCODE123',
+            '{commission_rate}' => '15',
+            '{tier_name}' => 'Tier II',
+            '{tier_badge}' => '💎',
+            '{coupon_discount}' => '5',
+            '{support_email}' => cas_get_support_email(),
+            '{dashboard_url}' => wc_get_page_permalink('myaccount')
+        );
+
+        $subject = str_replace(array_keys($vars), array_values($vars), $template['subject']);
+        $heading = str_replace(array_keys($vars), array_values($vars), $template['heading']);
+        $message = str_replace(array_keys($vars), array_values($vars), $template['message']);
+        $button_text = str_replace(array_keys($vars), array_values($vars), $template['button_text']);
+        $footer = str_replace(array_keys($vars), array_values($vars), $template['footer_text']);
+
+        $email_content = "
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+        </head>
+        <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <div style='background: #f9fafb; padding: 30px; border-radius: 8px;'>
+                <h2 style='color: #667eea; margin: 0 0 20px 0;'>{$heading}</h2>
+
+                <div style='background: #f0f0f0; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px;'>
+                    <h1 style='color: #667eea; font-size: 36px; margin: 0;'>TESTCODE123</h1>
+                    <p style='margin: 10px 0 0 0;'>Your unique promotional code (TEST)</p>
+                </div>
+
+                <div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                    {$message}
+                </div>
+
+                <p style='text-align: center; margin: 30px 0;'>
+                    <a href='{$vars['{dashboard_url}']}' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>{$button_text}</a>
+                </p>
+
+                <div style='border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;'>
+                    {$footer}
+                </div>
+
+                <p style='background: #fef3c7; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 13px; color: #92400e;'>
+                    <strong>This is a test email.</strong> In a real email, variables will be replaced with actual affiliate data.
+                </p>
+            </div>
+        </body>
+        </html>
+        ";
+
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        $sent = wp_mail($admin_email, '[TEST] ' . $subject, $email_content, $headers);
+
+        if ($sent) {
+            wp_send_json_success('Test email sent to ' . $admin_email);
+        } else {
+            wp_send_json_error('Failed to send email. Please check your server email configuration.');
+        }
     }
 
     // === REGISTRATION FORM ===
