@@ -377,65 +377,57 @@ $backup_info = cas_get_settings_backup_info();
             </div>
             <?php endforeach; ?>
             
-            <!-- Add New Tier Card -->
-            <div style="border: 2px dashed #d1d5db; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; cursor: pointer;" onclick="document.getElementById('createTierForm').scrollIntoView({behavior: 'smooth'});">
+            <div class="cas-tier-create" onclick="document.getElementById('createTierForm').scrollIntoView({behavior: 'smooth'});">
                 <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">➕</div>
                 <h3 style="margin: 0; color: #6b7280;">Create New Tier</h3>
                 <p style="margin: 10px 0 0 0; color: #9ca3af; font-size: 13px;">Click to add a custom tier</p>
             </div>
         </div>
     </div>
-    
-    <!-- Edit Tier Form -->
+
     <?php
     $editing_tier_id = isset($_GET['edit_tier']) ? sanitize_key($_GET['edit_tier']) : '';
     if (!empty($editing_tier_id) && isset($all_tiers[$editing_tier_id])):
         $editing_tier = $all_tiers[$editing_tier_id];
         $editing_settings = cas_get_all_tier_settings($editing_tier_id);
         $is_default_tier = in_array($editing_tier_id, array('tier_1', 'tier_2', 'ambassador'));
-
-        // Get suggested settings for this tier
         $suggested_settings = cas_get_suggested_tier_settings($editing_tier_id);
     ?>
 
-    <!-- Suggested Settings Box -->
     <?php if ($suggested_settings): ?>
-    <div style="background: #f0f9ff; border: 2px solid #0284c7; padding: 25px; border-radius: 12px; margin: 20px 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div class="cas-suggestion-box">
+        <div class="cas-suggestion-header">
             <h3 style="margin: 0; color: #0c4a6e;">💡 Suggested Settings for <?php echo esc_html($editing_tier['name']); ?></h3>
-            <button type="button" class="button button-primary" onclick="applySuggestedSettings('<?php echo esc_js($editing_tier_id); ?>')">
-                ✓ Accept Suggestion
-            </button>
+            <button type="button" class="button button-primary" onclick="applySuggestedSettings('<?php echo esc_js($editing_tier_id); ?>')">✓ Accept Suggestion</button>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+        <div class="cas-suggestion-grid">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Commission:</strong> <?php echo $suggested_settings['commission']; ?>%
             </div>
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Min Payout:</strong> <?php echo $suggested_settings['min_payout'] > 0 ? $suggested_settings['min_payout'] . '€' : 'No minimum'; ?>
             </div>
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Payment Days:</strong> <?php echo $suggested_settings['payment_days']; ?> days
             </div>
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Coupon Discount:</strong> <?php echo $suggested_settings['coupon_discount']; ?>€
             </div>
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Code Edit:</strong> <?php echo $suggested_settings['allow_code_edit'] ? '✓ Allowed' : '✗ Not allowed'; ?>
             </div>
-            <div style="background: white; padding: 12px; border-radius: 6px;">
+            <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Self-Referral:</strong> <?php echo $suggested_settings['allow_self_referral'] ? '✓ Allowed' : '✗ Blocked'; ?>
             </div>
         </div>
-
         <p style="margin: 15px 0 0 0; font-size: 13px; color: #0c4a6e;">
             <strong>Note:</strong> These are recommended best-practice settings. Click "Accept Suggestion" to apply them, or manually configure below.
         </p>
     </div>
     <?php endif; ?>
 
-    <div id="editTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; border: 3px solid #667eea;">
+    <div id="editTierForm" class="cas-white-box-border">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">⚙️ Edit Tier: <?php echo esc_html($editing_tier['name']); ?></h2>
             <a href="?page=affiliate-tiers" class="button">✕ Cancel</a>
@@ -566,27 +558,23 @@ $backup_info = cas_get_settings_backup_info();
     </div>
     <?php endif; ?>
 
-    <!-- Create New Tier Form -->
-    <div id="createTierForm" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+    <div id="createTierForm" class="cas-white-box">
         <h2>➕ Create New Tier <?php if (!cas_is_pro_active()) echo cas_pro_badge(); ?></h2>
 
         <?php if (!cas_is_pro_active()): ?>
-            <!-- PRO Upgrade Notice -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; text-align: center;">
+            <div class="cas-pro-upgrade">
                 <div style="font-size: 64px; margin-bottom: 20px;">👑</div>
-                <h3 style="margin: 0 0 15px 0; color: white; font-size: 24px;">Create Custom Tiers with PRO</h3>
+                <h3 class="cas-pro-upgrade h3">Create Custom Tiers with PRO</h3>
                 <p style="margin: 0 0 25px 0; opacity: 0.95; font-size: 16px;">
                     Unlock the ability to create unlimited custom tiers with unique commission rates, badges, and settings.
                 </p>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 25px;">
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Unlimited Custom Tiers</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Custom Badges & Names</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Flexible Commission Rates</span>
-                    <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 14px;">✓ Advanced Features</span>
+                <div class="cas-pro-features">
+                    <span class="cas-pro-feature">✓ Unlimited Custom Tiers</span>
+                    <span class="cas-pro-feature">✓ Custom Badges & Names</span>
+                    <span class="cas-pro-feature">✓ Flexible Commission Rates</span>
+                    <span class="cas-pro-feature">✓ Advanced Features</span>
                 </div>
-                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="background: white; color: #667eea; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                    Upgrade to PRO →
-                </a>
+                <a href="<?php echo esc_url(cas_get_upgrade_url()); ?>" target="_blank" style="background: white; color: #667eea; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">Upgrade to PRO →</a>
             </div>
         <?php else: ?>
 
@@ -701,10 +689,9 @@ $backup_info = cas_get_settings_backup_info();
         <?php endif; ?>
     </div>
     
-    <!-- Tips -->
-    <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0;">
-        <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">💡 Tips for Creating Tiers</h3>
-        <ul style="margin: 10px 0; padding-left: 20px; color: #0c4a6e;">
+    <div class="cas-tips-box">
+        <h3>💡 Tips for Creating Tiers</h3>
+        <ul>
             <li><strong>Progressive Structure:</strong> Higher tiers should offer better commission rates and benefits</li>
             <li><strong>Clear Names:</strong> Use recognizable tier names like Platinum, Diamond, Elite, VIP</li>
             <li><strong>Meaningful Badges:</strong> Choose emojis that represent the tier level (💎 💫 🌟 👑 ⭐)</li>
@@ -713,9 +700,8 @@ $backup_info = cas_get_settings_backup_info();
             <li><strong>Migration Path:</strong> Plan how affiliates can progress from lower to higher tiers</li>
         </ul>
     </div>
-    
-    <!-- Tier ID Examples -->
-    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+
+    <div class="cas-white-box">
         <h3 style="margin: 0 0 15px 0;">📋 Suggested Tier IDs & Names</h3>
         <table class="wp-list-table widefat">
             <thead>
