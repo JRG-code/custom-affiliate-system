@@ -267,6 +267,15 @@ class Custom_Affiliate_System {
         // Scheduled payments hook
         add_action('cas_process_automatic_payouts', 'cas_process_automatic_payouts');
 
+        // WooCommerce coupon admin customizations
+        add_filter('manage_edit-shop_coupon_columns', array($this, 'add_affiliate_column_to_coupons'));
+        add_action('manage_shop_coupon_posts_custom_column', array($this, 'show_affiliate_column_content'), 10, 2);
+        add_filter('manage_edit-shop_coupon_sortable_columns', array($this, 'make_affiliate_column_sortable'));
+        add_action('restrict_manage_posts', array($this, 'add_affiliate_coupon_filter'));
+        add_filter('parse_query', array($this, 'filter_affiliate_coupons'));
+        add_action('admin_notices', array($this, 'show_coupon_sync_notice'));
+        add_action('admin_init', array($this, 'sync_affiliate_coupons'));
+
         // WooCommerce My Account customization
         add_action('init', array($this, 'add_my_account_endpoints'));
         add_filter('woocommerce_account_menu_items', array($this, 'custom_my_account_menu'), 999);
@@ -1061,6 +1070,230 @@ class Custom_Affiliate_System {
             wp_send_json_success('Test email sent to ' . $admin_email);
         } else {
             wp_send_json_error('Failed to send email. Please check your server email configuration.');
+        }
+    }
+
+    // === WOOCOMMERCE COUPON ADMIN CUSTOMIZATIONS ===
+
+    /**
+     * Add "Affiliate" column to WooCommerce coupons list
+     */
+    public function add_affiliate_column_to_coupons($columns) {
+        $new_columns = array();
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            if ($key === 'coupon_code') {
+                $new_columns['affiliate_user'] = 'Affiliate User';
+            }
+        }
+        return $new_columns;
+    }
+
+    /**
+     * Show affiliate user in the custom column
+     */
+    public function show_affiliate_column_content($column, $post_id) {
+        if ($column === 'affiliate_user') {
+            $user_id = get_post_meta($post_id, '_affiliate_user_id', true);
+
+            if ($user_id) {
+                $user = get_userdata($user_id);
+                if ($user) {
+                    global $wpdb;
+                    $affiliate = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
+                        $user_id
+                    ));
+
+                    if ($affiliate) {
+                        $tier_badge = cas_get_tier_badge($affiliate->tier);
+                        $tier_name = cas_get_tier_name($affiliate->tier);
+                        echo '<strong>' . $tier_badge . ' ' . esc_html($user->display_name) . '</strong><br>';
+                        echo '<small style="color: #666;">' . esc_html($user->user_email) . '</small><br>';
+                        echo '<span style="background: ' . cas_get_tier_color($affiliate->tier) . '; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">' . esc_html($tier_name) . '</span>';
+                    } else {
+                        echo '<span style="color: #dc3545;">⚠ User exists but not an affiliate</span>';
+                    }
+                } else {
+                    echo '<span style="color: #dc3545;">⚠ User not found (ID: ' . $user_id . ')</span>';
+                }
+            } else {
+                echo '<span style="color: #999;">—</span>';
+            }
+        }
+    }
+
+    /**
+     * Make affiliate column sortable
+     */
+    public function make_affiliate_column_sortable($columns) {
+        $columns['affiliate_user'] = 'affiliate_user';
+        return $columns;
+    }
+
+    /**
+     * Add filter dropdown to show affiliate/non-affiliate coupons
+     */
+    public function add_affiliate_coupon_filter($post_type) {
+        if ($post_type === 'shop_coupon') {
+            $current = isset($_GET['affiliate_filter']) ? $_GET['affiliate_filter'] : '';
+            ?>
+            <select name="affiliate_filter">
+                <option value="">All Coupons</option>
+                <option value="affiliate" <?php selected($current, 'affiliate'); ?>>Affiliate Coupons Only</option>
+                <option value="non_affiliate" <?php selected($current, 'non_affiliate'); ?>>Non-Affiliate Coupons</option>
+            </select>
+            <?php
+        }
+    }
+
+    /**
+     * Filter coupons by affiliate status
+     */
+    public function filter_affiliate_coupons($query) {
+        global $pagenow, $typenow;
+
+        if ($pagenow === 'edit.php' && $typenow === 'shop_coupon' && isset($_GET['affiliate_filter'])) {
+            $filter = $_GET['affiliate_filter'];
+
+            if ($filter === 'affiliate') {
+                $meta_query = array(
+                    array(
+                        'key' => '_affiliate_user_id',
+                        'compare' => 'EXISTS'
+                    )
+                );
+                $query->set('meta_query', $meta_query);
+            } elseif ($filter === 'non_affiliate') {
+                $meta_query = array(
+                    array(
+                        'key' => '_affiliate_user_id',
+                        'compare' => 'NOT EXISTS'
+                    )
+                );
+                $query->set('meta_query', $meta_query);
+            }
+        }
+    }
+
+    /**
+     * Show notice if there are affiliates without coupons
+     */
+    public function show_coupon_sync_notice() {
+        global $pagenow, $typenow;
+
+        if ($pagenow === 'edit.php' && $typenow === 'shop_coupon') {
+            global $wpdb;
+
+            // Show permanent info notice about how to remove affiliates correctly
+            ?>
+            <div class="notice notice-info">
+                <p>
+                    <strong>ℹ️ How to Remove an Affiliate's Coupon</strong><br>
+                    <strong style="color: #d63638;">⚠️ Do NOT delete affiliate coupons directly here!</strong> If you delete a coupon but the affiliate is still active, it will be recreated during the next sync.<br><br>
+                    <strong>✅ Correct process to remove an affiliate:</strong><br>
+                    &nbsp;&nbsp;1️⃣ Go to <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>"><strong>Affiliate System → Affiliates</strong></a><br>
+                    &nbsp;&nbsp;2️⃣ <strong>Deactivate</strong> the affiliate (stops commissions, keeps history) OR <strong>Delete</strong> the affiliate (removes everything)<br>
+                    &nbsp;&nbsp;3️⃣ Then, if needed, delete the coupon here in WooCommerce<br><br>
+                    <strong>📌 Why this order?</strong> The affiliate system manages coupons automatically. Deleting only the coupon breaks the sync and may cause issues with commission tracking.
+                </p>
+            </div>
+            <?php
+
+            // Check for affiliates without coupons
+            $affiliates_without_coupons = $wpdb->get_results("
+                SELECT a.*, u.display_name, u.user_email
+                FROM {$wpdb->prefix}affiliates a
+                LEFT JOIN {$wpdb->users} u ON a.user_id = u.ID
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM {$wpdb->posts} p
+                    INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+                    WHERE p.post_type = 'shop_coupon'
+                    AND p.post_title = LOWER(a.affiliate_code)
+                    AND pm.meta_key = '_affiliate_user_id'
+                    AND pm.meta_value = a.user_id
+                )
+            ");
+
+            if (!empty($affiliates_without_coupons)) {
+                $count = count($affiliates_without_coupons);
+                ?>
+                <div class="notice notice-warning is-dismissible">
+                    <p>
+                        <strong>⚠ Affiliate Coupon Sync Required</strong><br>
+                        Found <?php echo $count; ?> affiliate<?php echo $count > 1 ? 's' : ''; ?> without WooCommerce coupons.
+                        <a href="<?php echo admin_url('edit.php?post_type=shop_coupon&sync_affiliate_coupons=1'); ?>" class="button button-primary" style="margin-left: 10px;">
+                            🔄 Sync Now
+                        </a>
+                    </p>
+                </div>
+                <?php
+            }
+        }
+    }
+
+    /**
+     * Sync affiliate coupons - create missing coupons for affiliates
+     */
+    public function sync_affiliate_coupons() {
+        if (isset($_GET['sync_affiliate_coupons']) && $_GET['sync_affiliate_coupons'] == '1' && current_user_can('manage_options')) {
+            global $wpdb;
+
+            // Get affiliates without proper WooCommerce coupons
+            $affiliates = $wpdb->get_results("
+                SELECT a.*, u.display_name
+                FROM {$wpdb->prefix}affiliates a
+                LEFT JOIN {$wpdb->users} u ON a.user_id = u.ID
+            ");
+
+            $created = 0;
+            $updated = 0;
+
+            foreach ($affiliates as $affiliate) {
+                // Check if coupon exists
+                $coupon_post = get_page_by_title(strtolower($affiliate->affiliate_code), OBJECT, 'shop_coupon');
+
+                if (!$coupon_post) {
+                    // Create new coupon
+                    $tier_settings = cas_get_all_tier_settings($affiliate->tier);
+                    $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
+
+                    $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount);
+                    $created++;
+                } else {
+                    // Update existing coupon to link it to affiliate
+                    $existing_user_id = get_post_meta($coupon_post->ID, '_affiliate_user_id', true);
+                    if (!$existing_user_id) {
+                        update_post_meta($coupon_post->ID, '_affiliate_user_id', $affiliate->user_id);
+                        $updated++;
+                    }
+                }
+            }
+
+            // Redirect with success message
+            $message = '';
+            if ($created > 0) $message .= "Created $created new coupon(s). ";
+            if ($updated > 0) $message .= "Linked $updated existing coupon(s). ";
+            if ($created == 0 && $updated == 0) $message = "All affiliate coupons are already synced!";
+
+            wp_redirect(add_query_arg(array(
+                'post_type' => 'shop_coupon',
+                'sync_success' => '1',
+                'sync_message' => urlencode($message)
+            ), admin_url('edit.php')));
+            exit;
+        }
+
+        // Show success message after redirect
+        if (isset($_GET['sync_success']) && $_GET['sync_success'] == '1') {
+            add_action('admin_notices', function() {
+                $message = isset($_GET['sync_message']) ? urldecode($_GET['sync_message']) : 'Sync completed!';
+                ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><strong>✅ Success!</strong> <?php echo esc_html($message); ?></p>
+                </div>
+                <?php
+            });
         }
     }
 
