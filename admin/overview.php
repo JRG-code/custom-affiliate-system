@@ -172,6 +172,31 @@ if (isset($_POST['add_affiliate']) && check_admin_referer('cas_add_affiliate')) 
     }
 }
 
+// Handle manual sync all coupons
+if (isset($_GET['sync_all_coupons']) && check_admin_referer('cas_sync_all_coupons', '_wpnonce')) {
+    // Get all tiers
+    $all_tiers = cas_get_available_tiers();
+    $total_synced = 0;
+
+    foreach ($all_tiers as $tier_id => $tier_info) {
+        $synced = cas_sync_tier_coupons($tier_id);
+        $total_synced += $synced;
+    }
+
+    set_transient('cas_coupons_synced', $total_synced, 10);
+    wp_redirect(add_query_arg(array('page' => 'affiliate-system', 'synced' => '1'), admin_url('admin.php')));
+    exit;
+}
+
+// Display sync success message
+if (isset($_GET['synced']) && $_GET['synced'] == '1') {
+    $synced_count = get_transient('cas_coupons_synced');
+    if ($synced_count !== false) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> ' . $synced_count . ' affiliate coupon(s) synced with current tier settings.</p></div>';
+        delete_transient('cas_coupons_synced');
+    }
+}
+
 // Handle tier upgrade
 if (isset($_POST['upgrade_affiliate']) && check_admin_referer('upgrade_affiliate_nonce')) {
     $user_id = intval($_POST['user_id']);
@@ -190,16 +215,22 @@ if (isset($_POST['upgrade_affiliate']) && check_admin_referer('upgrade_affiliate
         array('%d')
     );
     
-    // Update WooCommerce coupon discount amount
+    // Update WooCommerce coupon with new tier settings
     $affiliate = $wpdb->get_row($wpdb->prepare(
         "SELECT affiliate_code FROM {$wpdb->prefix}affiliates WHERE user_id = %d",
         $user_id
     ));
-    
+
     if ($affiliate) {
         $coupon = new WC_Coupon(strtolower($affiliate->affiliate_code));
         if ($coupon->get_id()) {
-            update_post_meta($coupon->get_id(), 'coupon_amount', $rates[$new_tier]);
+            // Get new tier's coupon settings
+            $tier_settings = cas_get_all_tier_settings($new_tier);
+            $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
+            $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
+
+            update_post_meta($coupon->get_id(), 'discount_type', $coupon_discount_type);
+            update_post_meta($coupon->get_id(), 'coupon_amount', $coupon_discount);
         }
     }
     
@@ -372,8 +403,14 @@ $total_users = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->users}");
     </div>
     <?php endif; ?>
 
-    <h2>All Affiliates</h2>
-    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">All Affiliates</h2>
+        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=affiliate-system&sync_all_coupons=1'), 'cas_sync_all_coupons'); ?>" class="button button-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
+            <span class="dashicons dashicons-update" style="font-size: 16px; width: 16px; height: 16px;"></span>
+            Sync Now
+        </a>
+    </div>
+
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <table class="wp-list-table widefat fixed striped">
             <thead>
