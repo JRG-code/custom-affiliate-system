@@ -216,8 +216,9 @@ foreach ($code_requests as $req) {
 ?>
 
 <div class="wrap">
+    <?php cas_render_admin_navigation('affiliate-reports'); ?>
+
     <h1 class="wp-heading-inline">📊 Reports & Management</h1>
-    <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>" class="page-title-action">Back to Overview</a>
     <hr class="wp-header-end">
 
     <div class="cas-reports-section">

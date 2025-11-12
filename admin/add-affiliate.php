@@ -80,6 +80,7 @@ if (isset($_POST['add_affiliate']) && check_admin_referer('cas_add_affiliate')) 
             // Get tier settings
             $commission_rate = cas_get_tier_setting($tier, 'commission');
             $coupon_discount = cas_get_tier_setting($tier, 'coupon_discount');
+            $coupon_discount_type = cas_get_tier_setting($tier, 'coupon_discount_type');
             $status = 'active';
 
             // Insert affiliate
@@ -108,7 +109,7 @@ if (isset($_POST['add_affiliate']) && check_admin_referer('cas_add_affiliate')) 
                 
                 $coupon_id = wp_insert_post($coupon);
                 
-                update_post_meta($coupon_id, 'discount_type', 'fixed_cart');
+                update_post_meta($coupon_id, 'discount_type', $coupon_discount_type);
                 update_post_meta($coupon_id, 'coupon_amount', $coupon_discount);
                 update_post_meta($coupon_id, 'individual_use', 'yes');
                 update_post_meta($coupon_id, 'usage_limit', '');
@@ -136,7 +137,7 @@ if (isset($_POST['add_affiliate']) && check_admin_referer('cas_add_affiliate')) 
                     <div style='background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;'>
                         <p style='margin: 5px 0;'><strong>Your Tier:</strong> {$tier_badge} {$tier_name}</p>
                         <p style='margin: 5px 0;'><strong>Commission Rate:</strong> {$commission_rate}%</p>
-                        <p style='margin: 5px 0;'><strong>Customer Discount:</strong> {$coupon_discount}€</p>
+                        <p style='margin: 5px 0;'><strong>Customer Discount:</strong> {$coupon_discount}" . (($coupon_discount_type === 'percent') ? '%' : '€') . "</p>
                     </div>
                     <p>You earn {$commission_rate}% commission on every sale made with your code!</p>
                     <p><a href='" . wc_get_account_endpoint_url('affiliate-dashboard') . "' style='background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;'>Go to Dashboard</a></p>

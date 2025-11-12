@@ -1,5 +1,32 @@
 /* Admin Styles for Affiliate System */
 
+/* Top Navigation */
+.cas-top-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -10px -20px 20px -22px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.cas-top-nav-inner { max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
+.cas-top-nav-brand { display: flex; align-items: center; gap: 10px; padding: 15px 0; }
+.cas-nav-logo { font-size: 24px; }
+.cas-nav-title { color: white; font-size: 18px; font-weight: 600; }
+.cas-nav-pro-badge { background: rgba(255,255,255,0.2); color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.cas-top-nav-menu { display: flex; gap: 5px; }
+.cas-nav-item { display: flex; align-items: center; gap: 6px; padding: 10px 16px; color: rgba(255,255,255,0.9); text-decoration: none; border-radius: 6px; transition: all 0.2s; font-size: 14px; }
+.cas-nav-item:hover { background: rgba(255,255,255,0.15); color: white; }
+.cas-nav-item.active { background: rgba(255,255,255,0.25); color: white; font-weight: 600; }
+.cas-nav-icon { font-size: 16px; }
+.cas-nav-label { white-space: nowrap; }
+
+@media (max-width: 1024px) {
+    .cas-top-nav-inner { flex-direction: column; align-items: flex-start; }
+    .cas-top-nav-menu { flex-wrap: wrap; width: 100%; }
+    .cas-nav-item { flex: 1; min-width: 120px; justify-content: center; }
+}
+
+@media (max-width: 768px) {
+    .cas-top-nav { margin: -10px -10px 20px -12px; }
+    .cas-top-nav-inner { padding: 0 10px; }
+    .cas-nav-label { display: none; }
+    .cas-nav-item { padding: 10px; }
+}
+
 .cas-settings-page, .cas-email-page { max-width: 1200px; }
 .cas-settings-page h1, .cas-email-page h1 { font-size: 28px; font-weight: 700; margin-bottom: 20px; }
 

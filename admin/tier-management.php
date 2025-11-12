@@ -45,6 +45,7 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
         $min_payout = floatval($_POST['min_payout']);
         $payment_days = intval($_POST['payment_days']);
         $coupon_discount = floatval($_POST['coupon_discount']);
+        $coupon_discount_type = isset($_POST['coupon_discount_type']) ? sanitize_text_field($_POST['coupon_discount_type']) : 'fixed_cart';
         $allow_code_edit = isset($_POST['allow_code_edit']) ? 1 : 0;
         $allow_self_referral = isset($_POST['allow_self_referral']) ? 1 : 0;
 
@@ -76,6 +77,7 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
                     'min_payout' => $min_payout,
                     'payment_days' => $payment_days,
                     'coupon_discount' => $coupon_discount,
+                    'coupon_discount_type' => $coupon_discount_type,
                     'allow_code_edit' => $allow_code_edit,
                     'allow_self_referral' => $allow_self_referral
                 );
@@ -93,6 +95,7 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
                         'min_payout' => $min_payout,
                         'payment_days' => $payment_days,
                         'coupon_discount' => $coupon_discount,
+                        'coupon_discount_type' => $coupon_discount_type,
                         'allow_code_edit' => $allow_code_edit,
                         'allow_self_referral' => $allow_self_referral,
                         'created_at' => $custom_tiers[$tier_id]['created_at'] ?? current_time('mysql')
@@ -110,6 +113,7 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
                         'min_payout' => $min_payout,
                         'payment_days' => $payment_days,
                         'coupon_discount' => $coupon_discount,
+                        'coupon_discount_type' => $coupon_discount_type,
                         'allow_code_edit' => $allow_code_edit,
                         'allow_self_referral' => $allow_self_referral
                     );
@@ -145,9 +149,10 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
         $min_payout = floatval($_POST['min_payout']);
         $payment_days = intval($_POST['payment_days']);
         $coupon_discount = floatval($_POST['coupon_discount']);
+        $coupon_discount_type = isset($_POST['coupon_discount_type']) ? sanitize_text_field($_POST['coupon_discount_type']) : 'fixed_cart';
         $allow_code_edit = isset($_POST['allow_code_edit']) ? 1 : 0;
         $allow_self_referral = isset($_POST['allow_self_referral']) ? 1 : 0;
-        
+
         $errors = array();
         
         // Validation
@@ -185,6 +190,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'min_payout' => $min_payout,
                 'payment_days' => $payment_days,
                 'coupon_discount' => $coupon_discount,
+                'coupon_discount_type' => $coupon_discount_type,
                 'allow_code_edit' => $allow_code_edit,
                 'allow_self_referral' => $allow_self_referral,
                 'created_at' => current_time('mysql')
@@ -205,6 +211,7 @@ if (isset($_POST['create_tier']) && check_admin_referer('cas_create_tier')) {
                 'min_payout' => $min_payout,
                 'payment_days' => $payment_days,
                 'coupon_discount' => $coupon_discount,
+                'coupon_discount_type' => $coupon_discount_type,
                 'allow_code_edit' => $allow_code_edit,
                 'allow_self_referral' => $allow_self_referral
             );
@@ -305,6 +312,8 @@ $backup_info = cas_get_settings_backup_info();
 ?>
 
 <div class="wrap">
+    <?php cas_render_admin_navigation('affiliate-tiers'); ?>
+
     <h1>🎯 Tier Management <?php echo cas_pro_badge(); ?></h1>
 
     <?php if ($backup_info): ?>
@@ -350,7 +359,11 @@ $backup_info = cas_get_settings_backup_info();
                     <p><strong>Commission:</strong> <?php echo $settings['commission']; ?>%</p>
                     <p><strong>Min Payout:</strong> <?php echo $settings['min_payout'] > 0 ? $settings['min_payout'] . '€' : 'No minimum'; ?></p>
                     <p><strong>Payment:</strong> <?php echo $settings['payment_days']; ?> days</p>
-                    <p><strong>Coupon:</strong> <?php echo $settings['coupon_discount']; ?>€</p>
+                    <p><strong>Coupon:</strong> <?php
+                        $discount_type = $settings['coupon_discount_type'] ?? 'fixed_cart';
+                        echo $settings['coupon_discount'];
+                        echo ($discount_type === 'percent') ? '%' : '€';
+                    ?></p>
                     <p><strong>Code Edit:</strong> <?php echo !empty($settings['allow_code_edit']) ? '✓ Allowed (1x/month)' : '✗ Not allowed'; ?></p>
                     <p><strong>Self-Referral:</strong> <?php echo !empty($settings['allow_self_referral']) ? '✓ Allowed' : '✗ Blocked'; ?></p>
                 </div>
@@ -412,7 +425,11 @@ $backup_info = cas_get_settings_backup_info();
                 <strong style="color: #0c4a6e;">Payment Days:</strong> <?php echo $suggested_settings['payment_days']; ?> days
             </div>
             <div class="cas-suggestion-item">
-                <strong style="color: #0c4a6e;">Coupon Discount:</strong> <?php echo $suggested_settings['coupon_discount']; ?>€
+                <strong style="color: #0c4a6e;">Coupon Discount:</strong> <?php
+                    $suggested_discount_type = $suggested_settings['coupon_discount_type'] ?? 'fixed_cart';
+                    echo $suggested_settings['coupon_discount'];
+                    echo ($suggested_discount_type === 'percent') ? '%' : '€';
+                ?>
             </div>
             <div class="cas-suggestion-item">
                 <strong style="color: #0c4a6e;">Code Edit:</strong> <?php echo $suggested_settings['allow_code_edit'] ? '✓ Allowed' : '✗ Not allowed'; ?>
@@ -513,11 +530,24 @@ $backup_info = cas_get_settings_backup_info();
 
                 <tr>
                     <th scope="row">
-                        <label for="edit_coupon_discount">Coupon Discount (€)</label>
+                        <label for="edit_coupon_discount">Coupon Discount</label>
                     </th>
                     <td>
                         <input type="number" name="coupon_discount" id="edit_coupon_discount" class="regular-text" step="0.01" min="0" value="<?php echo esc_attr($editing_settings['coupon_discount']); ?>">
                         <p class="description">Discount amount customer receives when using affiliate coupon</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="edit_coupon_discount_type">Discount Type</label>
+                    </th>
+                    <td>
+                        <select name="coupon_discount_type" id="edit_coupon_discount_type" class="regular-text">
+                            <option value="fixed_cart" <?php selected($editing_settings['coupon_discount_type'] ?? 'fixed_cart', 'fixed_cart'); ?>>Fixed Amount (€)</option>
+                            <option value="percent" <?php selected($editing_settings['coupon_discount_type'] ?? 'fixed_cart', 'percent'); ?>>Percentage (%)</option>
+                        </select>
+                        <p class="description">Choose whether the discount is a fixed amount or a percentage</p>
                     </td>
                 </tr>
 
@@ -644,11 +674,24 @@ $backup_info = cas_get_settings_backup_info();
                 
                 <tr>
                     <th scope="row">
-                        <label for="coupon_discount">Coupon Discount (€)</label>
+                        <label for="coupon_discount">Coupon Discount</label>
                     </th>
                     <td>
                         <input type="number" name="coupon_discount" id="coupon_discount" class="regular-text" step="0.01" min="0" value="5">
                         <p class="description">Discount amount customer receives when using affiliate coupon</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="coupon_discount_type">Discount Type</label>
+                    </th>
+                    <td>
+                        <select name="coupon_discount_type" id="coupon_discount_type" class="regular-text">
+                            <option value="fixed_cart">Fixed Amount (€)</option>
+                            <option value="percent">Percentage (%)</option>
+                        </select>
+                        <p class="description">Choose whether the discount is a fixed amount or a percentage</p>
                     </td>
                 </tr>
 
@@ -787,6 +830,9 @@ function applySuggestedSettings(tierId) {
     }
     if (document.getElementById('edit_coupon_discount')) {
         document.getElementById('edit_coupon_discount').value = settings.coupon_discount;
+    }
+    if (document.getElementById('edit_coupon_discount_type')) {
+        document.getElementById('edit_coupon_discount_type').value = settings.coupon_discount_type || 'fixed_cart';
     }
     if (document.getElementById('edit_allow_code_edit')) {
         document.getElementById('edit_allow_code_edit').checked = settings.allow_code_edit == 1;

@@ -10,9 +10,9 @@ if (!defined('ABSPATH')) exit;
  */
 function cas_get_default_tier_settings() {
     return array(
-        'tier_1' => array('commission' => 10, 'min_payout' => 20, 'payment_days' => 30, 'coupon_discount' => 5, 'allow_code_edit' => 0, 'allow_self_referral' => 0),
-        'tier_2' => array('commission' => 15, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'allow_code_edit' => 1, 'allow_self_referral' => 1),
-        'ambassador' => array('commission' => 20, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'allow_code_edit' => 1, 'allow_self_referral' => 1)
+        'tier_1' => array('commission' => 10, 'min_payout' => 20, 'payment_days' => 30, 'coupon_discount' => 5, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 0, 'allow_self_referral' => 0),
+        'tier_2' => array('commission' => 15, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1),
+        'ambassador' => array('commission' => 20, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1)
     );
 }
 
@@ -53,6 +53,7 @@ function cas_get_all_tier_settings($tier) {
         'min_payout' => cas_get_tier_setting($tier, 'min_payout'),
         'payment_days' => cas_get_tier_setting($tier, 'payment_days'),
         'coupon_discount' => cas_get_tier_setting($tier, 'coupon_discount'),
+        'coupon_discount_type' => cas_get_tier_setting($tier, 'coupon_discount_type'),
         'allow_code_edit' => cas_get_tier_setting($tier, 'allow_code_edit'),
         'allow_self_referral' => cas_get_tier_setting($tier, 'allow_self_referral')
     );
@@ -575,11 +576,11 @@ function cas_get_all_suggested_tier_settings() {
         $suggestions = array_merge(
             cas_get_default_tier_settings(),
             array(
-                'platinum' => array('commission' => 25, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'allow_code_edit' => 1, 'allow_self_referral' => 1),
-                'diamond' => array('commission' => 30, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'allow_code_edit' => 1, 'allow_self_referral' => 1),
-                'elite' => array('commission' => 35, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 10, 'allow_code_edit' => 1, 'allow_self_referral' => 1),
-                'vip' => array('commission' => 40, 'min_payout' => 0, 'payment_days' => 1, 'coupon_discount' => 10, 'allow_code_edit' => 1, 'allow_self_referral' => 1),
-                'partner' => array('commission' => 50, 'min_payout' => 0, 'payment_days' => 1, 'coupon_discount' => 15, 'allow_code_edit' => 1, 'allow_self_referral' => 1)
+                'platinum' => array('commission' => 25, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1),
+                'diamond' => array('commission' => 30, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 5, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1),
+                'elite' => array('commission' => 35, 'min_payout' => 0, 'payment_days' => 3, 'coupon_discount' => 10, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1),
+                'vip' => array('commission' => 40, 'min_payout' => 0, 'payment_days' => 1, 'coupon_discount' => 10, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1),
+                'partner' => array('commission' => 50, 'min_payout' => 0, 'payment_days' => 1, 'coupon_discount' => 15, 'coupon_discount_type' => 'fixed_cart', 'allow_code_edit' => 1, 'allow_self_referral' => 1)
             )
         );
     }
@@ -589,4 +590,74 @@ function cas_get_all_suggested_tier_settings() {
 function cas_get_suggested_tier_settings($tier) {
     $suggestions = cas_get_all_suggested_tier_settings();
     return isset($suggestions[$tier]) ? $suggestions[$tier] : null;
+}
+
+/**
+ * Render top navigation menu for admin pages
+ */
+function cas_render_admin_navigation($current_page = '') {
+    $menu_items = array(
+        'affiliate-system' => array(
+            'title' => 'Overview',
+            'icon' => '📊',
+            'url' => admin_url('admin.php?page=affiliate-system')
+        ),
+        'affiliate-system' => array(
+            'title' => 'Affiliates',
+            'icon' => '👥',
+            'url' => admin_url('admin.php?page=affiliate-system')
+        ),
+        'affiliate-tiers' => array(
+            'title' => 'Tier Management',
+            'icon' => '🎯',
+            'url' => admin_url('admin.php?page=affiliate-tiers')
+        ),
+        'affiliate-reports' => array(
+            'title' => 'Reports',
+            'icon' => '📈',
+            'url' => admin_url('admin.php?page=affiliate-reports')
+        ),
+        'affiliate-settings' => array(
+            'title' => 'Settings',
+            'icon' => '⚙️',
+            'url' => admin_url('admin.php?page=affiliate-settings')
+        )
+    );
+
+    // Add Advanced Features if PRO
+    if (cas_is_pro_active()) {
+        $menu_items['affiliate-advanced'] = array(
+            'title' => 'Advanced Features',
+            'icon' => '🚀',
+            'url' => admin_url('admin.php?page=affiliate-advanced'),
+            'badge' => cas_pro_badge()
+        );
+    }
+
+    ?>
+    <div class="cas-top-nav">
+        <div class="cas-top-nav-inner">
+            <div class="cas-top-nav-brand">
+                <span class="cas-nav-logo">🎯</span>
+                <span class="cas-nav-title">Affiliate System</span>
+                <?php if (cas_is_pro_active()): ?>
+                    <span class="cas-nav-pro-badge">PRO</span>
+                <?php endif; ?>
+            </div>
+            <nav class="cas-top-nav-menu">
+                <?php foreach ($menu_items as $page => $item):
+                    $is_active = ($current_page === $page) ? 'active' : '';
+                ?>
+                    <a href="<?php echo esc_url($item['url']); ?>" class="cas-nav-item <?php echo $is_active; ?>">
+                        <span class="cas-nav-icon"><?php echo $item['icon']; ?></span>
+                        <span class="cas-nav-label"><?php echo esc_html($item['title']); ?></span>
+                        <?php if (isset($item['badge'])): ?>
+                            <?php echo $item['badge']; ?>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+        </div>
+    </div>
+    <?php
 }
