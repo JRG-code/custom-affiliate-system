@@ -246,6 +246,8 @@ if (isset($_POST['cas_pro_license_key']) && !empty($_POST['cas_pro_license_key']
 ?>
 
 <div class="wrap cas-settings-page">
+    <?php cas_render_admin_navigation('affiliate-settings'); ?>
+
     <h1>⚙️ General Settings</h1>
     
     <?php if (!cas_is_pro_active()): ?>

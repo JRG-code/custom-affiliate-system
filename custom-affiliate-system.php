@@ -481,7 +481,8 @@ class Custom_Affiliate_System {
         );
 
         $coupon_discount = cas_get_tier_setting('tier_1', 'coupon_discount');
-        $this->create_coupon($affiliate_code, $user_id, $coupon_discount);
+        $coupon_discount_type = cas_get_tier_setting('tier_1', 'coupon_discount_type');
+        $this->create_coupon($affiliate_code, $user_id, $coupon_discount, $coupon_discount_type);
 
         // Schedule welcome email with 10-second delay if enabled
         if (cas_is_send_welcome_email_enabled()) {
@@ -491,7 +492,7 @@ class Custom_Affiliate_System {
         $this->notify_admin_new_affiliate($user, $affiliate_code);
     }
     
-    private function create_coupon($code, $user_id, $discount = 5) {
+    private function create_coupon($code, $user_id, $discount = 5, $discount_type = 'fixed_cart') {
         $coupon = array(
             'post_title' => strtolower($code),
             'post_content' => '',
@@ -499,10 +500,10 @@ class Custom_Affiliate_System {
             'post_author' => 1,
             'post_type' => 'shop_coupon'
         );
-        
+
         $coupon_id = wp_insert_post($coupon);
-        
-        update_post_meta($coupon_id, 'discount_type', 'fixed_cart');
+
+        update_post_meta($coupon_id, 'discount_type', $discount_type);
         update_post_meta($coupon_id, 'coupon_amount', $discount);
         update_post_meta($coupon_id, 'individual_use', 'yes');
         update_post_meta($coupon_id, 'usage_limit', '');
@@ -510,7 +511,7 @@ class Custom_Affiliate_System {
         update_post_meta($coupon_id, 'expiry_date', '');
         update_post_meta($coupon_id, 'free_shipping', 'no');
         update_post_meta($coupon_id, '_affiliate_user_id', $user_id);
-        
+
         return $coupon_id;
     }
     
@@ -1257,8 +1258,9 @@ class Custom_Affiliate_System {
                     // Create new coupon
                     $tier_settings = cas_get_all_tier_settings($affiliate->tier);
                     $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
+                    $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
 
-                    $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount);
+                    $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount, $coupon_discount_type);
                     $created++;
                 } else {
                     // Update existing coupon to link it to affiliate

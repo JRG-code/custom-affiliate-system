@@ -50,6 +50,8 @@ $template = get_option('cas_welcome_email_template', array(
 ?>
 
 <div class="wrap">
+    <?php cas_render_admin_navigation('affiliate-advanced'); ?>
+
     <h1 class="wp-heading-inline">🚀 Advanced Features</h1>
     <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>" class="page-title-action">Back to Overview</a>
     <hr class="wp-header-end">
