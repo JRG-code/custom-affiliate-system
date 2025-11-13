@@ -637,46 +637,40 @@ function cas_render_admin_navigation($current_page = '') {
     $menu_items = array(
         'affiliate-system' => array(
             'title' => 'Overview',
-            'icon' => '📊',
+            'icon' => '',
             'url' => admin_url('admin.php?page=affiliate-system')
         ),
         'affiliate-system' => array(
             'title' => 'Affiliates',
-            'icon' => '👥',
+            'icon' => '',
             'url' => admin_url('admin.php?page=affiliate-system')
         ),
         'affiliate-tiers' => array(
             'title' => 'Tier Management',
-            'icon' => '🎯',
+            'icon' => '',
             'url' => admin_url('admin.php?page=affiliate-tiers')
         ),
         'affiliate-reports' => array(
             'title' => 'Reports',
-            'icon' => '📈',
+            'icon' => '',
             'url' => admin_url('admin.php?page=affiliate-reports')
         ),
         'affiliate-settings' => array(
             'title' => 'Settings',
-            'icon' => '⚙️',
+            'icon' => '',
             'url' => admin_url('admin.php?page=affiliate-settings')
+        ),
+        'affiliate-advanced' => array(
+            'title' => 'Advanced Features',
+            'icon' => '',
+            'url' => admin_url('admin.php?page=affiliate-advanced')
         )
     );
-
-    // Add Advanced Features if PRO
-    if (cas_is_pro_active()) {
-        $menu_items['affiliate-advanced'] = array(
-            'title' => 'Advanced Features',
-            'icon' => '🚀',
-            'url' => admin_url('admin.php?page=affiliate-advanced'),
-            'badge' => cas_pro_badge()
-        );
-    }
 
     ?>
     <div class="cas-top-nav">
         <div class="cas-top-nav-inner">
             <div class="cas-top-nav-brand">
-                <span class="cas-nav-logo">🎯</span>
                 <span class="cas-nav-title">Affiliate System</span>
                 <?php if (cas_is_pro_active()): ?>
                     <span class="cas-nav-pro-badge">PRO</span>
@@ -687,7 +681,9 @@ function cas_render_admin_navigation($current_page = '') {
                     $is_active = ($current_page === $page) ? 'active' : '';
                 ?>
                     <a href="<?php echo esc_url($item['url']); ?>" class="cas-nav-item <?php echo $is_active; ?>">
-                        <span class="cas-nav-icon"><?php echo $item['icon']; ?></span>
+                        <?php if (!empty($item['icon'])): ?>
+                            <span class="cas-nav-icon"><?php echo $item['icon']; ?></span>
+                        <?php endif; ?>
                         <span class="cas-nav-label"><?php echo esc_html($item['title']); ?></span>
                         <?php if (isset($item['badge'])): ?>
                             <?php echo $item['badge']; ?>

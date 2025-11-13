@@ -1240,7 +1240,7 @@ class Custom_Affiliate_System {
         if (isset($_GET['sync_affiliate_coupons']) && $_GET['sync_affiliate_coupons'] == '1' && current_user_can('manage_options')) {
             global $wpdb;
 
-            // Get affiliates without proper WooCommerce coupons
+            // Get all affiliates
             $affiliates = $wpdb->get_results("
                 SELECT a.*, u.display_name
                 FROM {$wpdb->prefix}affiliates a
@@ -1249,25 +1249,44 @@ class Custom_Affiliate_System {
 
             $created = 0;
             $updated = 0;
+            $skipped = 0;
 
             foreach ($affiliates as $affiliate) {
-                // Check if coupon exists
-                $coupon_post = get_page_by_title(strtolower($affiliate->affiliate_code), OBJECT, 'shop_coupon');
+                // Check if coupon exists using direct database query (more reliable than get_page_by_title)
+                $coupon_code_lower = strtolower($affiliate->affiliate_code);
 
-                if (!$coupon_post) {
-                    // Create new coupon
+                $coupon_id = $wpdb->get_var($wpdb->prepare("
+                    SELECT ID FROM {$wpdb->posts}
+                    WHERE post_type = 'shop_coupon'
+                    AND post_title = %s
+                    AND post_status IN ('publish', 'draft')
+                ", $coupon_code_lower));
+
+                if (!$coupon_id) {
+                    // Coupon doesn't exist - create it
                     $tier_settings = cas_get_all_tier_settings($affiliate->tier);
                     $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
                     $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
 
-                    $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount, $coupon_discount_type);
-                    $created++;
+                    $new_coupon_id = $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount, $coupon_discount_type);
+
+                    if ($new_coupon_id) {
+                        $created++;
+                        cas_debug_log("Sync: Created coupon '{$affiliate->affiliate_code}' for affiliate ID {$affiliate->id}", 'info');
+                    }
                 } else {
-                    // Update existing coupon to link it to affiliate
-                    $existing_user_id = get_post_meta($coupon_post->ID, '_affiliate_user_id', true);
+                    // Coupon exists - check if it's linked to affiliate
+                    $existing_user_id = get_post_meta($coupon_id, '_affiliate_user_id', true);
+
                     if (!$existing_user_id) {
-                        update_post_meta($coupon_post->ID, '_affiliate_user_id', $affiliate->user_id);
+                        // Link coupon to affiliate
+                        update_post_meta($coupon_id, '_affiliate_user_id', $affiliate->user_id);
                         $updated++;
+                        cas_debug_log("Sync: Linked existing coupon '{$affiliate->affiliate_code}' to affiliate ID {$affiliate->id}", 'info');
+                    } else if ($existing_user_id != $affiliate->user_id) {
+                        // Coupon is linked to different user - skip with warning
+                        $skipped++;
+                        cas_debug_log("Sync: Skipped coupon '{$affiliate->affiliate_code}' - already linked to user ID {$existing_user_id}", 'warning');
                     }
                 }
             }
@@ -1276,7 +1295,8 @@ class Custom_Affiliate_System {
             $message = '';
             if ($created > 0) $message .= "Created $created new coupon(s). ";
             if ($updated > 0) $message .= "Linked $updated existing coupon(s). ";
-            if ($created == 0 && $updated == 0) $message = "All affiliate coupons are already synced!";
+            if ($skipped > 0) $message .= "Skipped $skipped coupon(s) (already linked to other users). ";
+            if ($created == 0 && $updated == 0 && $skipped == 0) $message = "All affiliate coupons are already synced!";
 
             wp_redirect(add_query_arg(array(
                 'post_type' => 'shop_coupon',
@@ -1292,7 +1312,7 @@ class Custom_Affiliate_System {
                 $message = isset($_GET['sync_message']) ? urldecode($_GET['sync_message']) : 'Sync completed!';
                 ?>
                 <div class="notice notice-success is-dismissible">
-                    <p><strong>✅ Success!</strong> <?php echo esc_html($message); ?></p>
+                    <p><strong>Success!</strong> <?php echo esc_html($message); ?></p>
                 </div>
                 <?php
             });
@@ -1494,25 +1514,14 @@ class Custom_Affiliate_System {
         array($this, 'admin_tier_management_page')
     );
 
-    // Advanced Features (PRO only)
-    if (cas_is_pro_active()) {
-        add_submenu_page(
-            'affiliate-system',
-            'Advanced Features',
-            'Advanced Features ' . cas_pro_badge(),
-            'manage_options',
-            'affiliate-advanced',
-            array($this, 'admin_advanced_features_page')
-        );
-    }
-
+    // Advanced Features
     add_submenu_page(
         'affiliate-system',
-        'Email Affiliates',
-        'Email Affiliates',
+        'Advanced Features',
+        'Advanced Features',
         'manage_options',
-        'affiliate-email',
-        array($this, 'admin_email_page')
+        'affiliate-advanced',
+        array($this, 'admin_advanced_features_page')
     );
 
     if (cas_is_debug_enabled()) {
