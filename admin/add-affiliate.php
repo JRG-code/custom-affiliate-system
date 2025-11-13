@@ -361,8 +361,6 @@ document.getElementById('custom_code').addEventListener('input', function() {
 // Preview selected user
 document.getElementById('user_id').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
-    if (selectedOption.value) {
-        console.log('Selected user:', selectedOption.text);
-    }
+    // User selection handled silently (enable debug mode to see logs)
 });
 </script>

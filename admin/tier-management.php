@@ -812,7 +812,7 @@ if (document.getElementById('tier_id')) {
 // Preview badge in real-time
 if (document.getElementById('tier_badge')) {
     document.getElementById('tier_badge').addEventListener('input', function() {
-        console.log('Badge preview:', this.value);
+        // Badge input handled silently (enable debug mode to see logs)
     });
 }
 
