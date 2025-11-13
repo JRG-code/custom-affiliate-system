@@ -159,10 +159,79 @@ $total_affiliates = array_sum($tier_counts);
     </div>
     <?php endif; ?>
 
+    <style>
+    .cas-accordion {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px 0;
+        overflow: hidden;
+    }
+
+    .cas-accordion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        cursor: pointer;
+        background: white;
+        border: none;
+        width: 100%;
+        text-align: left;
+        transition: background 0.3s ease;
+    }
+
+    .cas-accordion-header:hover {
+        background: #f9fafb;
+    }
+
+    .cas-accordion-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .cas-accordion-arrow {
+        font-size: 20px;
+        color: #667eea;
+        transition: transform 0.3s ease;
+        font-weight: bold;
+    }
+
+    .cas-accordion.active .cas-accordion-arrow {
+        transform: rotate(180deg);
+    }
+
+    .cas-accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.4s ease;
+        padding: 0 30px;
+    }
+
+    .cas-accordion.active .cas-accordion-content {
+        max-height: 5000px;
+        padding: 0 30px 30px 30px;
+    }
+
+    .cas-accordion-description {
+        color: #6b7280;
+        font-size: 14px;
+        margin: 0 0 10px 0;
+    }
+    </style>
+
     <!-- Welcome Email Section -->
-    <div class="cas-email-box" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2 style="margin-top: 0;">Welcome Email Template</h2>
-        <p>Customize the email that customers receive when they become affiliates.</p>
+    <div class="cas-accordion">
+        <button class="cas-accordion-header" onclick="toggleAccordion(this)">
+            <div>
+                <h2 class="cas-accordion-title">Welcome Email Template</h2>
+                <p class="cas-accordion-description">Customize the email that customers receive when they become affiliates</p>
+            </div>
+            <span class="cas-accordion-arrow">▼</span>
+        </button>
+        <div class="cas-accordion-content">
 
         <?php if (!cas_is_pro_active()): ?>
         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
@@ -257,12 +326,20 @@ $total_affiliates = array_sum($tier_counts);
                 </button>
             </p>
         </form>
+
+        </div>
     </div>
 
     <!-- Send Affiliates Email Section -->
-    <div class="cas-email-box" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0;">
-        <h2 style="margin-top: 0;">Send Affiliates Email</h2>
-        <p>Send emails to all affiliates or specific tiers. Perfect for important updates, promotions, or program changes.</p>
+    <div class="cas-accordion">
+        <button class="cas-accordion-header" onclick="toggleAccordion(this)">
+            <div>
+                <h2 class="cas-accordion-title">Send Affiliates Email</h2>
+                <p class="cas-accordion-description">Send emails to all affiliates or specific tiers - perfect for important updates and promotions</p>
+            </div>
+            <span class="cas-accordion-arrow">▼</span>
+        </button>
+        <div class="cas-accordion-content">
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px; text-align: center;">
@@ -357,10 +434,18 @@ $total_affiliates = array_sum($tier_counts);
                 <li><strong>Test first:</strong> Consider sending to a small tier first to test</li>
             </ul>
         </div>
+
+        </div>
     </div>
 </div>
 
 <script>
+// Toggle accordion sections
+function toggleAccordion(button) {
+    const accordion = button.parentElement;
+    accordion.classList.toggle('active');
+}
+
 function sendTestEmail() {
     if (!confirm('Send a test welcome email to your admin email address?')) {
         return;
