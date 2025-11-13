@@ -405,9 +405,9 @@ $total_users = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->users}");
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h2 style="margin: 0;">All Affiliates</h2>
-        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=affiliate-system&sync_all_coupons=1'), 'cas_sync_all_coupons'); ?>" class="button button-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
+        <a href="<?php echo admin_url('edit.php?post_type=shop_coupon&sync_affiliate_coupons=1'); ?>" class="button button-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
             <span class="dashicons dashicons-update" style="font-size: 16px; width: 16px; height: 16px;"></span>
-            Sync Now
+            Sync Coupons
         </a>
     </div>
 

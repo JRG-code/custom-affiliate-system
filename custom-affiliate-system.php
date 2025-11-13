@@ -495,11 +495,10 @@ class Custom_Affiliate_System {
     private function create_coupon($code, $user_id, $discount = 5, $discount_type = 'fixed_cart') {
         // Validate inputs
         $code = trim($code);
-        error_log("create_coupon: Attempting to create coupon '{$code}' for user_id {$user_id}");
+        cas_sync_log("create_coupon: Attempting to create coupon '{$code}' for user_id {$user_id}", 'info');
 
         if (empty($code)) {
-            error_log("create_coupon ERROR: Empty coupon code provided");
-            cas_debug_log("create_coupon ERROR: Empty coupon code provided", 'error');
+            cas_sync_log("create_coupon ERROR: Empty coupon code provided", 'error');
             return false;
         }
 
@@ -512,7 +511,7 @@ class Custom_Affiliate_System {
             'post_type' => 'shop_coupon'
         );
 
-        error_log("create_coupon: Calling wp_insert_post for '{$code}'");
+        cas_sync_log("create_coupon: Calling wp_insert_post for '{$code}'", 'info');
 
         // Insert the coupon post
         $coupon_id = wp_insert_post($coupon, true);
@@ -520,18 +519,16 @@ class Custom_Affiliate_System {
         // Check for errors
         if (is_wp_error($coupon_id)) {
             $error_msg = $coupon_id->get_error_message();
-            error_log("create_coupon ERROR: wp_insert_post failed for '{$code}' - {$error_msg}");
-            cas_debug_log("create_coupon ERROR: Failed to create coupon '{$code}' - {$error_msg}", 'error');
+            cas_sync_log("create_coupon ERROR: wp_insert_post failed for '{$code}' - {$error_msg}", 'error');
             return $coupon_id;
         }
 
         if (!$coupon_id) {
-            error_log("create_coupon ERROR: wp_insert_post returned 0 for code '{$code}'");
-            cas_debug_log("create_coupon ERROR: wp_insert_post returned 0 for code '{$code}'", 'error');
+            cas_sync_log("create_coupon ERROR: wp_insert_post returned 0 for code '{$code}'", 'error');
             return false;
         }
 
-        error_log("create_coupon: wp_insert_post successful, got ID {$coupon_id}. Setting metadata...");
+        cas_sync_log("create_coupon: wp_insert_post successful, got ID {$coupon_id}. Setting metadata...", 'info');
 
         // Set coupon metadata
         update_post_meta($coupon_id, 'discount_type', $discount_type);
@@ -543,8 +540,7 @@ class Custom_Affiliate_System {
         update_post_meta($coupon_id, 'free_shipping', 'no');
         update_post_meta($coupon_id, '_affiliate_user_id', $user_id);
 
-        error_log("create_coupon: SUCCESS - Created coupon '{$code}' (ID: {$coupon_id}) with {$discount_type} discount of {$discount}");
-        cas_debug_log("create_coupon: Successfully created coupon '{$code}' (ID: {$coupon_id}) with {$discount_type} discount of {$discount}", 'info');
+        cas_sync_log("create_coupon: SUCCESS - Created coupon '{$code}' (ID: {$coupon_id}) with {$discount_type} discount of {$discount}", 'info');
 
         return $coupon_id;
     }
@@ -1280,8 +1276,8 @@ class Custom_Affiliate_System {
         if (isset($_GET['sync_affiliate_coupons']) && $_GET['sync_affiliate_coupons'] == '1' && current_user_can('manage_options')) {
             global $wpdb;
 
-            // Always log sync start to PHP error log for debugging
-            error_log('=== AFFILIATE SYNC START ===');
+            // Always log sync start
+            cas_sync_log('=== SYNC START ===', 'info');
 
             // Clear WordPress object cache to ensure fresh data
             wp_cache_flush();
@@ -1293,7 +1289,7 @@ class Custom_Affiliate_System {
                 LEFT JOIN {$wpdb->users} u ON a.user_id = u.ID
             ");
 
-            error_log('Sync: Found ' . count($affiliates) . ' affiliates to check');
+            cas_sync_log('Found ' . count($affiliates) . ' affiliates to check', 'info');
 
             $created = 0;
             $updated = 0;
@@ -1307,12 +1303,12 @@ class Custom_Affiliate_System {
                 $affiliate_code = trim($affiliate->affiliate_code);
                 if (empty($affiliate_code)) {
                     $errors[] = "Affiliate ID {$affiliate->id} has empty code";
-                    error_log("Sync: Affiliate ID {$affiliate->id} ({$affiliate->display_name}) has empty code - SKIPPED");
+                    cas_sync_log("Affiliate ID {$affiliate->id} ({$affiliate->display_name}) has empty code - SKIPPED", 'warning');
                     continue;
                 }
 
                 $coupon_code_lower = strtolower($affiliate_code);
-                error_log("Sync: Checking affiliate ID {$affiliate->id} ({$affiliate->display_name}) with code '{$affiliate_code}'");
+                cas_sync_log("Checking affiliate ID {$affiliate->id} ({$affiliate->display_name}) with code '{$affiliate_code}'", 'info');
 
                 // Check if coupon exists in ANY status (including trash)
                 $coupon_data = $wpdb->get_row($wpdb->prepare("
@@ -1325,7 +1321,7 @@ class Custom_Affiliate_System {
 
                 if (!$coupon_data) {
                     // Coupon doesn't exist at all - create it
-                    error_log("Sync: No coupon found for '{$affiliate_code}' - CREATING NEW");
+                    cas_sync_log("No coupon found for '{$affiliate_code}' - CREATING NEW", 'info');
                     $tier_settings = cas_get_all_tier_settings($affiliate->tier);
                     $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
                     $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
@@ -1335,17 +1331,15 @@ class Custom_Affiliate_System {
                     if ($new_coupon_id && !is_wp_error($new_coupon_id)) {
                         $created++;
                         $details[] = "Created coupon '{$affiliate_code}' for {$affiliate->display_name}";
-                        error_log("Sync: SUCCESS - Created coupon '{$affiliate_code}' (ID: {$new_coupon_id})");
-                        cas_debug_log("Sync: Created new coupon '{$affiliate_code}' (ID: {$new_coupon_id}) for affiliate ID {$affiliate->id}", 'info');
+                        cas_sync_log("SUCCESS - Created coupon '{$affiliate_code}' (ID: {$new_coupon_id})", 'info');
                     } else {
                         $error_msg = is_wp_error($new_coupon_id) ? $new_coupon_id->get_error_message() : 'Unknown error';
                         $errors[] = "Failed to create coupon '{$affiliate_code}': {$error_msg}";
-                        error_log("Sync: FAILED - Could not create coupon '{$affiliate_code}' - {$error_msg}");
-                        cas_debug_log("Sync ERROR: Failed to create coupon '{$affiliate_code}' - {$error_msg}", 'error');
+                        cas_sync_log("FAILED - Could not create coupon '{$affiliate_code}' - {$error_msg}", 'error');
                     }
                 } else if ($coupon_data->post_status === 'trash') {
                     // Coupon exists but is in trash - restore it
-                    error_log("Sync: Coupon '{$affiliate_code}' found in TRASH (ID: {$coupon_data->ID}) - RESTORING");
+                    cas_sync_log("Coupon '{$affiliate_code}' found in TRASH (ID: {$coupon_data->ID}) - RESTORING", 'info');
                     wp_untrash_post($coupon_data->ID);
 
                     // Update metadata with current tier settings
@@ -1356,11 +1350,10 @@ class Custom_Affiliate_System {
 
                     $restored++;
                     $details[] = "Restored coupon '{$affiliate_code}' from trash for {$affiliate->display_name}";
-                    error_log("Sync: SUCCESS - Restored coupon '{$affiliate_code}' from trash");
-                    cas_debug_log("Sync: Restored coupon '{$affiliate_code}' (ID: {$coupon_data->ID}) from trash for affiliate ID {$affiliate->id}", 'info');
+                    cas_sync_log("SUCCESS - Restored coupon '{$affiliate_code}' from trash", 'info');
                 } else {
                     // Coupon exists and is active - check if it's linked to affiliate
-                    error_log("Sync: Coupon '{$affiliate_code}' exists (ID: {$coupon_data->ID}, Status: {$coupon_data->post_status}) - checking link");
+                    cas_sync_log("Coupon '{$affiliate_code}' exists (ID: {$coupon_data->ID}, Status: {$coupon_data->post_status}) - checking link", 'info');
                     $existing_user_id = get_post_meta($coupon_data->ID, '_affiliate_user_id', true);
 
                     if (!$existing_user_id) {
@@ -1368,16 +1361,14 @@ class Custom_Affiliate_System {
                         update_post_meta($coupon_data->ID, '_affiliate_user_id', $affiliate->user_id);
                         $updated++;
                         $details[] = "Linked coupon '{$affiliate_code}' to {$affiliate->display_name}";
-                        error_log("Sync: SUCCESS - Linked coupon '{$affiliate_code}' to affiliate user_id {$affiliate->user_id}");
-                        cas_debug_log("Sync: Linked existing coupon '{$affiliate_code}' (ID: {$coupon_data->ID}) to affiliate ID {$affiliate->id}", 'info');
+                        cas_sync_log("SUCCESS - Linked coupon '{$affiliate_code}' to affiliate user_id {$affiliate->user_id}", 'info');
                     } else if ($existing_user_id != $affiliate->user_id) {
                         // Coupon is linked to different user - skip with warning
                         $skipped++;
-                        error_log("Sync: SKIPPED - Coupon '{$affiliate_code}' already linked to different user_id {$existing_user_id}");
-                        cas_debug_log("Sync: Skipped coupon '{$affiliate_code}' - already linked to user ID {$existing_user_id}", 'warning');
+                        cas_sync_log("SKIPPED - Coupon '{$affiliate_code}' already linked to different user_id {$existing_user_id}", 'warning');
                     } else {
                         // Already linked correctly - nothing to do
-                        error_log("Sync: OK - Coupon '{$affiliate_code}' already correctly linked");
+                        cas_sync_log("OK - Coupon '{$affiliate_code}' already correctly linked", 'info');
                     }
                 }
             }
@@ -1386,10 +1377,11 @@ class Custom_Affiliate_System {
             wp_cache_flush();
 
             // Log summary
-            error_log("=== AFFILIATE SYNC COMPLETE ===");
-            error_log("Created: {$created}, Restored: {$restored}, Updated: {$updated}, Skipped: {$skipped}, Errors: " . count($errors));
+            $summary = "=== SYNC COMPLETE === Created: {$created}, Restored: {$restored}, Updated: {$updated}, Skipped: {$skipped}, Errors: " . count($errors);
+            cas_sync_log($summary, 'info');
+
             if (!empty($details)) {
-                error_log("Details: " . implode(' | ', $details));
+                cas_sync_log("Details: " . implode(' | ', $details), 'info');
             }
 
             // Build success message
@@ -1398,7 +1390,7 @@ class Custom_Affiliate_System {
             if ($restored > 0) $message .= "Restored {$restored} coupon(s) from trash. ";
             if ($updated > 0) $message .= "Linked {$updated} existing coupon(s). ";
             if ($skipped > 0) $message .= "Skipped {$skipped} coupon(s) (already linked to other users). ";
-            if (count($errors) > 0) $message .= "Errors: " . count($errors) . " (check server error log). ";
+            if (count($errors) > 0) $message .= "Errors: " . count($errors) . " (check Debug Log). ";
             if ($created == 0 && $restored == 0 && $updated == 0 && $skipped == 0 && count($errors) == 0) {
                 $message = "All affiliate coupons are already synced!";
             }
@@ -1406,8 +1398,7 @@ class Custom_Affiliate_System {
             // Log errors
             if (!empty($errors)) {
                 foreach ($errors as $error) {
-                    error_log("Sync ERROR: {$error}");
-                    cas_debug_log("Sync ERROR: {$error}", 'error');
+                    cas_sync_log("ERROR: {$error}", 'error');
                 }
             }
 

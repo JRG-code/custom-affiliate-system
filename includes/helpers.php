@@ -272,6 +272,33 @@ function cas_debug_log($message, $type = 'info') {
     $wpdb->insert($table, array('type' => $type, 'message' => $message, 'user_id' => get_current_user_id() ?: null), array('%s', '%s', '%d'));
 }
 
+/**
+ * Force log sync operations (ignores debug mode setting)
+ */
+function cas_sync_log($message, $type = 'info') {
+    global $wpdb;
+    $table = $wpdb->prefix . 'affiliate_debug_log';
+
+    // Ensure table exists
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table'") != $table) {
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta("CREATE TABLE $table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            timestamp datetime DEFAULT CURRENT_TIMESTAMP,
+            type varchar(20) DEFAULT 'info',
+            message text NOT NULL,
+            user_id bigint(20) NULL,
+            PRIMARY KEY (id), KEY type (type), KEY timestamp (timestamp)
+        ) {$wpdb->get_charset_collate()};");
+    }
+
+    // Always log, regardless of debug mode
+    $wpdb->insert($table, array('type' => $type, 'message' => '[SYNC] ' . $message, 'user_id' => get_current_user_id() ?: null), array('%s', '%s', '%d'));
+
+    // Also log to PHP error log
+    error_log("[SYNC] {$message}");
+}
+
 function cas_get_debug_logs($limit = 100) {
     global $wpdb;
     return $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}affiliate_debug_log ORDER BY timestamp DESC LIMIT %d", $limit));
