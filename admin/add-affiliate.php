@@ -353,6 +353,8 @@ $total_users = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->users}");
 </div>
 
 <script>
+const casDebugEnabled = <?php echo cas_is_debug_enabled() ? 'true' : 'false'; ?>;
+
 // Auto-format custom code input to uppercase
 document.getElementById('custom_code').addEventListener('input', function() {
     this.value = this.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
@@ -361,6 +363,8 @@ document.getElementById('custom_code').addEventListener('input', function() {
 // Preview selected user
 document.getElementById('user_id').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
-    // User selection handled silently (enable debug mode to see logs)
+    if (selectedOption.value && casDebugEnabled) {
+        console.log('Selected user:', selectedOption.text);
+    }
 });
 </script>

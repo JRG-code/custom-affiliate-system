@@ -802,6 +802,8 @@ $backup_info = cas_get_settings_backup_info();
 </div>
 
 <script>
+const casDebugEnabled = <?php echo cas_is_debug_enabled() ? 'true' : 'false'; ?>;
+
 // Auto-format tier ID input
 if (document.getElementById('tier_id')) {
     document.getElementById('tier_id').addEventListener('input', function() {
@@ -812,7 +814,9 @@ if (document.getElementById('tier_id')) {
 // Preview badge in real-time
 if (document.getElementById('tier_badge')) {
     document.getElementById('tier_badge').addEventListener('input', function() {
-        // Badge input handled silently (enable debug mode to see logs)
+        if (casDebugEnabled) {
+            console.log('Badge preview:', this.value);
+        }
     });
 }
 
