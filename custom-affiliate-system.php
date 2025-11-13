@@ -493,16 +493,37 @@ class Custom_Affiliate_System {
     }
     
     private function create_coupon($code, $user_id, $discount = 5, $discount_type = 'fixed_cart') {
+        // Validate inputs
+        $code = trim($code);
+        if (empty($code)) {
+            cas_debug_log("create_coupon ERROR: Empty coupon code provided", 'error');
+            return false;
+        }
+
+        // Prepare coupon post data
         $coupon = array(
             'post_title' => strtolower($code),
             'post_content' => '',
             'post_status' => 'publish',
-            'post_author' => 1,
+            'post_author' => get_current_user_id() ?: 1,
             'post_type' => 'shop_coupon'
         );
 
-        $coupon_id = wp_insert_post($coupon);
+        // Insert the coupon post
+        $coupon_id = wp_insert_post($coupon, true);
 
+        // Check for errors
+        if (is_wp_error($coupon_id)) {
+            cas_debug_log("create_coupon ERROR: Failed to create coupon '{$code}' - " . $coupon_id->get_error_message(), 'error');
+            return $coupon_id;
+        }
+
+        if (!$coupon_id) {
+            cas_debug_log("create_coupon ERROR: wp_insert_post returned 0 for code '{$code}'", 'error');
+            return false;
+        }
+
+        // Set coupon metadata
         update_post_meta($coupon_id, 'discount_type', $discount_type);
         update_post_meta($coupon_id, 'coupon_amount', $discount);
         update_post_meta($coupon_id, 'individual_use', 'yes');
@@ -511,6 +532,8 @@ class Custom_Affiliate_System {
         update_post_meta($coupon_id, 'expiry_date', '');
         update_post_meta($coupon_id, 'free_shipping', 'no');
         update_post_meta($coupon_id, '_affiliate_user_id', $user_id);
+
+        cas_debug_log("create_coupon: Successfully created coupon '{$code}' (ID: {$coupon_id}) with {$discount_type} discount of {$discount}", 'info');
 
         return $coupon_id;
     }
@@ -1187,16 +1210,22 @@ class Custom_Affiliate_System {
             global $wpdb;
 
             // Show permanent info notice about how to remove affiliates correctly
+            $debug_enabled = cas_is_debug_enabled();
             ?>
             <div class="notice notice-info">
                 <p>
-                    <strong>ℹ️ How to Remove an Affiliate's Coupon</strong><br>
-                    <strong style="color: #d63638;">⚠️ Do NOT delete affiliate coupons directly here!</strong> If you delete a coupon but the affiliate is still active, it will be recreated during the next sync.<br><br>
-                    <strong>✅ Correct process to remove an affiliate:</strong><br>
-                    &nbsp;&nbsp;1️⃣ Go to <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>"><strong>Affiliate System → Affiliates</strong></a><br>
-                    &nbsp;&nbsp;2️⃣ <strong>Deactivate</strong> the affiliate (stops commissions, keeps history) OR <strong>Delete</strong> the affiliate (removes everything)<br>
-                    &nbsp;&nbsp;3️⃣ Then, if needed, delete the coupon here in WooCommerce<br><br>
-                    <strong>📌 Why this order?</strong> The affiliate system manages coupons automatically. Deleting only the coupon breaks the sync and may cause issues with commission tracking.
+                    <strong>How to Remove an Affiliate's Coupon</strong><br>
+                    <strong style="color: #d63638;">Warning: Do NOT delete affiliate coupons directly here!</strong> If you delete a coupon but the affiliate is still active, it will be recreated during the next sync.<br><br>
+                    <strong>Correct process to remove an affiliate:</strong><br>
+                    &nbsp;&nbsp;1. Go to <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>"><strong>Affiliate System - Affiliates</strong></a><br>
+                    &nbsp;&nbsp;2. <strong>Deactivate</strong> the affiliate (stops commissions, keeps history) OR <strong>Delete</strong> the affiliate (removes everything)<br>
+                    &nbsp;&nbsp;3. Then, if needed, delete the coupon here in WooCommerce<br><br>
+                    <strong>Why this order?</strong> The affiliate system manages coupons automatically. Deleting only the coupon breaks the sync and may cause issues with commission tracking.
+                    <?php if (!$debug_enabled): ?>
+                        <br><br><strong>Troubleshooting sync issues?</strong> Enable Debug Mode in <a href="<?php echo admin_url('admin.php?page=affiliate-settings'); ?>">Settings</a> to see detailed logs.
+                    <?php else: ?>
+                        <br><br><strong>Debug Mode is enabled.</strong> Check <a href="<?php echo admin_url('admin.php?page=affiliate-debug'); ?>">Debug Log</a> for sync details.
+                    <?php endif; ?>
                 </p>
             </div>
             <?php
@@ -1240,6 +1269,9 @@ class Custom_Affiliate_System {
         if (isset($_GET['sync_affiliate_coupons']) && $_GET['sync_affiliate_coupons'] == '1' && current_user_can('manage_options')) {
             global $wpdb;
 
+            // Clear WordPress object cache to ensure fresh data
+            wp_cache_flush();
+
             // Get all affiliates
             $affiliates = $wpdb->get_results("
                 SELECT a.*, u.display_name
@@ -1249,54 +1281,94 @@ class Custom_Affiliate_System {
 
             $created = 0;
             $updated = 0;
+            $restored = 0;
             $skipped = 0;
+            $errors = array();
 
             foreach ($affiliates as $affiliate) {
-                // Check if coupon exists using direct database query (more reliable than get_page_by_title)
-                $coupon_code_lower = strtolower($affiliate->affiliate_code);
+                // Clean and validate affiliate code
+                $affiliate_code = trim($affiliate->affiliate_code);
+                if (empty($affiliate_code)) {
+                    $errors[] = "Affiliate ID {$affiliate->id} has empty code";
+                    continue;
+                }
 
-                $coupon_id = $wpdb->get_var($wpdb->prepare("
-                    SELECT ID FROM {$wpdb->posts}
+                $coupon_code_lower = strtolower($affiliate_code);
+
+                // Check if coupon exists in ANY status (including trash)
+                $coupon_data = $wpdb->get_row($wpdb->prepare("
+                    SELECT ID, post_status FROM {$wpdb->posts}
                     WHERE post_type = 'shop_coupon'
                     AND post_title = %s
-                    AND post_status IN ('publish', 'draft')
+                    ORDER BY post_status = 'publish' DESC, ID DESC
+                    LIMIT 1
                 ", $coupon_code_lower));
 
-                if (!$coupon_id) {
-                    // Coupon doesn't exist - create it
+                if (!$coupon_data) {
+                    // Coupon doesn't exist at all - create it
                     $tier_settings = cas_get_all_tier_settings($affiliate->tier);
                     $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
                     $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
 
-                    $new_coupon_id = $this->create_coupon($affiliate->affiliate_code, $affiliate->user_id, $coupon_discount, $coupon_discount_type);
+                    $new_coupon_id = $this->create_coupon($affiliate_code, $affiliate->user_id, $coupon_discount, $coupon_discount_type);
 
-                    if ($new_coupon_id) {
+                    if ($new_coupon_id && !is_wp_error($new_coupon_id)) {
                         $created++;
-                        cas_debug_log("Sync: Created coupon '{$affiliate->affiliate_code}' for affiliate ID {$affiliate->id}", 'info');
+                        cas_debug_log("Sync: Created new coupon '{$affiliate_code}' (ID: {$new_coupon_id}) for affiliate ID {$affiliate->id}", 'info');
+                    } else {
+                        $error_msg = is_wp_error($new_coupon_id) ? $new_coupon_id->get_error_message() : 'Unknown error';
+                        $errors[] = "Failed to create coupon '{$affiliate_code}': {$error_msg}";
+                        cas_debug_log("Sync ERROR: Failed to create coupon '{$affiliate_code}' - {$error_msg}", 'error');
                     }
+                } else if ($coupon_data->post_status === 'trash') {
+                    // Coupon exists but is in trash - restore it
+                    wp_untrash_post($coupon_data->ID);
+
+                    // Update metadata with current tier settings
+                    $tier_settings = cas_get_all_tier_settings($affiliate->tier);
+                    update_post_meta($coupon_data->ID, 'discount_type', $tier_settings['coupon_discount_type'] ?? 'fixed_cart');
+                    update_post_meta($coupon_data->ID, 'coupon_amount', $tier_settings['coupon_discount'] ?? 5);
+                    update_post_meta($coupon_data->ID, '_affiliate_user_id', $affiliate->user_id);
+
+                    $restored++;
+                    cas_debug_log("Sync: Restored coupon '{$affiliate_code}' (ID: {$coupon_data->ID}) from trash for affiliate ID {$affiliate->id}", 'info');
                 } else {
-                    // Coupon exists - check if it's linked to affiliate
-                    $existing_user_id = get_post_meta($coupon_id, '_affiliate_user_id', true);
+                    // Coupon exists and is active - check if it's linked to affiliate
+                    $existing_user_id = get_post_meta($coupon_data->ID, '_affiliate_user_id', true);
 
                     if (!$existing_user_id) {
                         // Link coupon to affiliate
-                        update_post_meta($coupon_id, '_affiliate_user_id', $affiliate->user_id);
+                        update_post_meta($coupon_data->ID, '_affiliate_user_id', $affiliate->user_id);
                         $updated++;
-                        cas_debug_log("Sync: Linked existing coupon '{$affiliate->affiliate_code}' to affiliate ID {$affiliate->id}", 'info');
+                        cas_debug_log("Sync: Linked existing coupon '{$affiliate_code}' (ID: {$coupon_data->ID}) to affiliate ID {$affiliate->id}", 'info');
                     } else if ($existing_user_id != $affiliate->user_id) {
                         // Coupon is linked to different user - skip with warning
                         $skipped++;
-                        cas_debug_log("Sync: Skipped coupon '{$affiliate->affiliate_code}' - already linked to user ID {$existing_user_id}", 'warning');
+                        cas_debug_log("Sync: Skipped coupon '{$affiliate_code}' - already linked to user ID {$existing_user_id}", 'warning');
                     }
                 }
             }
 
-            // Redirect with success message
+            // Clear cache again after all changes
+            wp_cache_flush();
+
+            // Build success message
             $message = '';
-            if ($created > 0) $message .= "Created $created new coupon(s). ";
-            if ($updated > 0) $message .= "Linked $updated existing coupon(s). ";
-            if ($skipped > 0) $message .= "Skipped $skipped coupon(s) (already linked to other users). ";
-            if ($created == 0 && $updated == 0 && $skipped == 0) $message = "All affiliate coupons are already synced!";
+            if ($created > 0) $message .= "Created {$created} new coupon(s). ";
+            if ($restored > 0) $message .= "Restored {$restored} coupon(s) from trash. ";
+            if ($updated > 0) $message .= "Linked {$updated} existing coupon(s). ";
+            if ($skipped > 0) $message .= "Skipped {$skipped} coupon(s) (already linked to other users). ";
+            if (count($errors) > 0) $message .= "Errors: " . count($errors) . " (check debug log). ";
+            if ($created == 0 && $restored == 0 && $updated == 0 && $skipped == 0 && count($errors) == 0) {
+                $message = "All affiliate coupons are already synced!";
+            }
+
+            // Log errors
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    cas_debug_log("Sync ERROR: {$error}", 'error');
+                }
+            }
 
             wp_redirect(add_query_arg(array(
                 'post_type' => 'shop_coupon',
