@@ -162,6 +162,45 @@ function cas_init_default_settings() {
     return true;
 }
 
+/**
+ * Repair incomplete settings by merging with defaults
+ * Preserves existing custom values while filling in missing fields
+ */
+function cas_repair_incomplete_settings() {
+    $current_settings = get_option('cas_settings', array());
+    $defaults = array_merge(
+        cas_get_default_tier_settings(),
+        array('general' => array(
+            'currency_symbol' => '€',
+            'support_email' => get_option('admin_email'),
+            'auto_create_affiliate' => 1,
+            'auto_approve' => 1,
+            'send_welcome_email' => 1,
+            'terms_page' => 0,
+            'auto_payouts_enabled' => 0,
+            'payout_schedule' => 'monthly'
+        ))
+    );
+
+    // Deep merge: preserve existing values, add missing ones
+    foreach ($defaults as $key => $value) {
+        if (!isset($current_settings[$key])) {
+            // Missing tier/section - add it
+            $current_settings[$key] = $value;
+        } elseif (is_array($value)) {
+            // Merge arrays (tier settings)
+            foreach ($value as $subkey => $subvalue) {
+                if (!isset($current_settings[$key][$subkey])) {
+                    $current_settings[$key][$subkey] = $subvalue;
+                }
+            }
+        }
+    }
+
+    update_option('cas_settings', $current_settings);
+    return true;
+}
+
 function cas_restore_settings_from_backup() {
     $backup = get_option('cas_settings_backup', false);
     if ($backup && !empty($backup)) {

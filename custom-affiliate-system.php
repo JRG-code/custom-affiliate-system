@@ -124,6 +124,9 @@ class Custom_Affiliate_System {
                 update_option('cas_settings_backup', $current_settings);
                 update_option('cas_settings_backup_date', current_time('mysql'));
             }
+
+            // Repair incomplete settings (preserves custom values, fills missing ones)
+            cas_repair_incomplete_settings();
         }
 
         // Schedule automatic payouts
