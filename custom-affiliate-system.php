@@ -1257,11 +1257,9 @@ class Custom_Affiliate_System {
                 ?>
                 <div class="notice notice-warning is-dismissible">
                     <p>
-                        <strong>⚠ Affiliate Coupon Sync Required</strong><br>
+                        <strong>Affiliate Coupon Sync Required</strong><br>
                         Found <?php echo $count; ?> affiliate<?php echo $count > 1 ? 's' : ''; ?> without WooCommerce coupons.
-                        <a href="<?php echo admin_url('edit.php?post_type=shop_coupon&sync_affiliate_coupons=1'); ?>" class="button button-primary" style="margin-left: 10px;">
-                            🔄 Sync Now
-                        </a>
+                        Go to <a href="<?php echo admin_url('admin.php?page=affiliate-system'); ?>"><strong>Affiliate System → Overview</strong></a> and click the <strong>"Sync Coupons"</strong> button.
                     </p>
                 </div>
                 <?php
