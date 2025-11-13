@@ -12,7 +12,14 @@ global $wpdb;
 if (isset($_GET['saved']) && $_GET['saved'] == '1') {
     $saved_tier = get_transient('cas_tier_saved');
     if ($saved_tier) {
-        echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($saved_tier) . '" has been updated successfully.</p></div>';
+        if (is_array($saved_tier)) {
+            $tier_name = $saved_tier['name'];
+            $synced_count = $saved_tier['synced'];
+            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($tier_name) . '" has been updated successfully. ' . ($synced_count > 0 ? $synced_count . ' affiliate coupon(s) synced with new settings.' : '') . '</p></div>';
+        } else {
+            // Backward compatibility for old format
+            echo '<div class="notice notice-success is-dismissible"><p><strong>✅ Success!</strong> Tier "' . esc_html($saved_tier) . '" has been updated successfully.</p></div>';
+        }
         delete_transient('cas_tier_saved');
     }
 }
@@ -121,8 +128,11 @@ if (isset($_POST['edit_tier']) && check_admin_referer('cas_edit_tier')) {
                 }
             }
 
+            // Sync all coupons for this tier to match new settings
+            $synced_count = cas_sync_tier_coupons($tier_id);
+
             // Set transient for success message (survives redirect)
-            set_transient('cas_tier_saved', $tier_name, 10);
+            set_transient('cas_tier_saved', array('name' => $tier_name, 'synced' => $synced_count), 10);
 
             // Redirect to clear form and show success message
             wp_redirect(add_query_arg(array('page' => 'affiliate-tiers', 'saved' => '1'), admin_url('admin.php')));

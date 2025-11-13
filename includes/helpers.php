@@ -593,6 +593,44 @@ function cas_get_suggested_tier_settings($tier) {
 }
 
 /**
+ * Sync all coupons for affiliates in a specific tier
+ */
+function cas_sync_tier_coupons($tier_id) {
+    global $wpdb;
+
+    // Get all affiliates in this tier
+    $affiliates = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}affiliates WHERE tier = %s",
+        $tier_id
+    ));
+
+    if (empty($affiliates)) {
+        return 0;
+    }
+
+    // Get tier settings
+    $tier_settings = cas_get_all_tier_settings($tier_id);
+    $coupon_discount = $tier_settings['coupon_discount'] ?? 5;
+    $coupon_discount_type = $tier_settings['coupon_discount_type'] ?? 'fixed_cart';
+
+    $updated = 0;
+
+    foreach ($affiliates as $affiliate) {
+        // Find coupon by affiliate code
+        $coupon_post = get_page_by_title(strtolower($affiliate->affiliate_code), OBJECT, 'shop_coupon');
+
+        if ($coupon_post) {
+            // Update coupon meta with new tier settings
+            update_post_meta($coupon_post->ID, 'discount_type', $coupon_discount_type);
+            update_post_meta($coupon_post->ID, 'coupon_amount', $coupon_discount);
+            $updated++;
+        }
+    }
+
+    return $updated;
+}
+
+/**
  * Render top navigation menu for admin pages
  */
 function cas_render_admin_navigation($current_page = '') {
