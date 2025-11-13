@@ -811,9 +811,19 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         </div>
     </div>
 
-    <!-- Performance Mini Chart -->
+    <!-- Performance Chart with Period Selector -->
     <div style="background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
-        <?php cas_render_performance_mini_chart($affiliate->id); ?>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">📈 Performance</h3>
+            <div style="display: flex; gap: 5px; background: #f3f4f6; padding: 4px; border-radius: 8px;">
+                <button onclick="changePeriod('7days', this)" class="period-btn active" style="padding: 6px 16px; border: none; background: #667eea; color: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">7 Days</button>
+                <button onclick="changePeriod('1month', this)" class="period-btn" style="padding: 6px 16px; border: none; background: transparent; color: #6b7280; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">1 Month</button>
+                <button onclick="changePeriod('1year', this)" class="period-btn" style="padding: 6px 16px; border: none; background: transparent; color: #6b7280; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">1 Year</button>
+            </div>
+        </div>
+        <div id="performanceChartContainer">
+            <?php cas_render_performance_mini_chart($affiliate->id); ?>
+        </div>
     </div>
 
     <!-- Stats Grid -->
@@ -935,81 +945,6 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         </div>
     </div>
 
-    <!-- Code Change Request Section -->
-    <div id="codeChangeSection" class="payout-section">
-        <h2>Affiliate Code Management</h2>
-
-        <?php
-        // Check if user can edit code (tier setting)
-        $can_edit_code = cas_get_tier_setting($affiliate->tier, 'allow_code_edit');
-
-        // Check for pending code change request
-        $pending_code_change = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
-            WHERE affiliate_id = %d AND status = 'pending'
-            ORDER BY requested_at DESC LIMIT 1",
-            $affiliate->id
-        ));
-
-        // Check last approved change date (for 30-day limit)
-        $last_change = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}affiliate_code_changes
-            WHERE affiliate_id = %d AND status = 'approved'
-            ORDER BY requested_at DESC LIMIT 1",
-            $affiliate->id
-        ));
-
-        $can_request = true;
-        $reason = '';
-
-        if (!$can_edit_code) {
-            $can_request = false;
-            $reason = 'Your tier does not allow code changes.';
-        } elseif ($pending_code_change) {
-            $can_request = false;
-            $reason = 'You already have a pending code change request.';
-        } elseif ($last_change) {
-            $days_since_change = floor((time() - strtotime($last_change->requested_at)) / 86400);
-            if ($days_since_change < 30) {
-                $can_request = false;
-                $days_remaining = 30 - $days_since_change;
-                $reason = "You can request a code change again in {$days_remaining} days.";
-            }
-        }
-        ?>
-
-        <div class="balance-display">
-            <div>
-                <p class="balance-label">Current Code</p>
-                <p class="balance-amount" style="color: #667eea; font-size: 28px;"><?php echo esc_html($affiliate->affiliate_code); ?></p>
-            </div>
-            <div class="balance-info">
-                <p class="info-item">Tier: <?php echo esc_html($tier_name); ?></p>
-                <p class="info-item">Code Changes: <?php echo $can_edit_code ? 'Allowed (1x/month)' : 'Not Allowed'; ?></p>
-            </div>
-        </div>
-
-        <?php if ($pending_code_change): ?>
-            <div class="alert alert-info">
-                <strong>Pending Request</strong><br>
-                You requested to change your code to <strong><?php echo esc_html($pending_code_change->new_code); ?></strong>
-                on <?php echo date('d/m/Y', strtotime($pending_code_change->requested_at)); ?>.<br>
-                <small>An administrator will review your request shortly.</small>
-            </div>
-        <?php elseif ($can_request): ?>
-            <div class="payout-available">
-                <button class="btn-primary" onclick="openCodeChangeModal()" style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);">
-                    Request Code Change
-                </button>
-            </div>
-        <?php else: ?>
-            <div class="alert alert-warning">
-                <strong>Code Change Not Available</strong><br>
-                <?php echo $reason; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-
     <!-- Recent Sales -->
     <?php if (!empty($recent_referrals)): ?>
     <div class="recent-sales-section">
@@ -1044,9 +979,6 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         </div>
     </div>
     <?php endif; ?>
-
-    <!-- Analytics Dashboard with Charts -->
-    <?php cas_render_analytics_dashboard($affiliate->id); ?>
 
     <!-- Tier Info & Conditions -->
     <div class="conditions-section">
@@ -1345,7 +1277,7 @@ document.getElementById('new_code').addEventListener('input', function() {
 document.querySelector('select[name="payment_method"]').addEventListener('change', function() {
     const method = this.value;
     const detailsField = document.querySelector('textarea[name="payment_details"]');
-    
+
     if (method === 'bank_transfer') {
         detailsField.placeholder = 'Insere o teu NIB (21 dígitos)';
     } else if (method === 'mbway') {
@@ -1354,4 +1286,22 @@ document.querySelector('select[name="payment_method"]').addEventListener('change
         detailsField.placeholder = 'Insere o teu email PayPal';
     }
 });
+
+// Change performance chart period (visual only - functionality to be implemented)
+function changePeriod(period, button) {
+    // Update button styles
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.style.background = 'transparent';
+        btn.style.color = '#6b7280';
+        btn.classList.remove('active');
+    });
+
+    button.style.background = '#667eea';
+    button.style.color = 'white';
+    button.classList.add('active');
+
+    // Note: Currently showing 7-day data regardless of selection
+    // Full implementation would require AJAX call to fetch different period data
+    console.log('Period changed to:', period);
+}
 </script>
