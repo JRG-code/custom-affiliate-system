@@ -92,6 +92,7 @@ class Custom_Affiliate_System {
         add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
         add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
         add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('dashboard_main_color', 'Dashboard Main Color', 'cas_dashboard_main_color_field_callback', 'cas-settings', 'cas_general_section');
 
         // Automatic Payouts Section
         add_settings_section('cas_payouts_section', '💰 Automatic Payouts', 'cas_payouts_section_callback', 'cas-settings');

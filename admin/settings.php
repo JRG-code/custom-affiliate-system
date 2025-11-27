@@ -144,6 +144,20 @@ function cas_terms_page_field_callback() {
     <?php
 }
 
+function cas_dashboard_main_color_field_callback() {
+    $options = get_option('cas_settings', array());
+    // Default to website's primary color or fallback to purple gradient
+    $default_color = get_theme_mod('primary_color', '#667eea');
+    $value = isset($options['general']['dashboard_main_color']) ? $options['general']['dashboard_main_color'] : $default_color;
+    ?>
+    <input type="color" name="cas_settings[general][dashboard_main_color]" value="<?php echo esc_attr($value); ?>" class="color-picker">
+    <p class="description">Choose the main color for the influencer dashboard gradients. This will customize the header, buttons, and accent colors while maintaining the gradient style.</p>
+    <div style="margin-top: 10px; padding: 15px; background: linear-gradient(135deg, <?php echo esc_attr($value); ?> 0%, <?php echo esc_attr(cas_adjust_brightness($value, -20)); ?> 100%); color: white; border-radius: 8px; max-width: 300px;">
+        <strong>Preview:</strong> This is how the gradient will look
+    </div>
+    <?php
+}
+
 function cas_auto_payouts_enabled_field_callback() {
     $options = get_option('cas_settings', array());
     $value = isset($options['general']['auto_payouts_enabled']) ? $options['general']['auto_payouts_enabled'] : 0;
@@ -201,6 +215,7 @@ if (!function_exists('cas_sanitize_settings')) {
             $sanitized['general']['auto_approve'] = isset($input['general']['auto_approve']) ? 1 : 0;
             $sanitized['general']['send_welcome_email'] = isset($input['general']['send_welcome_email']) ? 1 : 0;
             $sanitized['general']['terms_page'] = intval($input['general']['terms_page'] ?? 0);
+            $sanitized['general']['dashboard_main_color'] = sanitize_hex_color($input['general']['dashboard_main_color'] ?? get_theme_mod('primary_color', '#667eea'));
             $sanitized['general']['auto_payouts_enabled'] = isset($input['general']['auto_payouts_enabled']) ? 1 : 0;
             $sanitized['general']['payout_schedule'] = sanitize_text_field($input['general']['payout_schedule'] ?? 'monthly');
         }

@@ -9,6 +9,13 @@ $affiliate = $wpdb->get_row($wpdb->prepare(
     $user_id
 ));
 
+// Get customizable dashboard color
+$main_color = cas_get_general_setting('dashboard_main_color');
+if (empty($main_color)) {
+    $main_color = get_theme_mod('primary_color', '#667eea');
+}
+$gradient_end = cas_adjust_brightness($main_color, -20);
+
 if (!$affiliate) {
     echo '<p>Não és um afiliado ativo. Contacta o suporte.</p>';
     return;
@@ -95,11 +102,11 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 }
 
 .woocommerce-MyAccount-navigation ul li.is-active a {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%) !important;
     color: white !important;
-    border-color: #667eea !important;
+    border-color: <?php echo esc_attr($main_color); ?> !important;
     font-weight: 600 !important;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    box-shadow: 0 4px 12px <?php echo esc_attr($main_color); ?>4d !important;
 }
 
 .woocommerce-MyAccount-content {
@@ -133,12 +140,12 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 
 /* Header */
 .dashboard-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%);
     border-radius: 16px;
     padding: 40px;
     margin-bottom: 30px;
     color: white;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 24px <?php echo esc_attr($main_color); ?>4d;
 }
 
 .header-content {
@@ -272,7 +279,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 }
 
 .stat-card.highlight {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%);
     color: white;
 }
 
@@ -405,7 +412,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%);
     color: white;
     padding: 16px 40px;
     border: none;
@@ -414,12 +421,12 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
     font-size: 18px;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px <?php echo esc_attr($main_color); ?>4d;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 16px <?php echo esc_attr($main_color); ?>66;
 }
 
 /* Alerts */
@@ -539,15 +546,15 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 .tier-upgrade {
     margin-top: 30px;
     padding: 20px;
-    background: linear-gradient(135deg, #667eea15, #764ba215);
+    background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?>15, <?php echo esc_attr($gradient_end); ?>15);
     border-radius: 8px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid <?php echo esc_attr($main_color); ?>;
 }
 
 .btn-secondary {
     background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: <?php echo esc_attr($main_color); ?>;
+    border: 2px solid <?php echo esc_attr($main_color); ?>;
     padding: 12px 24px;
     border-radius: 8px;
     font-weight: 600;
@@ -558,7 +565,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
 }
 
 .btn-secondary:hover {
-    background: #667eea;
+    background: <?php echo esc_attr($main_color); ?>;
     color: white;
 }
 
@@ -815,7 +822,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
             <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Performance</h3>
             <div style="display: flex; gap: 5px; background: #f3f4f6; padding: 4px; border-radius: 8px;">
-                <button onclick="changePeriod('7days', this)" class="period-btn active" style="padding: 6px 16px; border: none; background: #667eea; color: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">7 Days</button>
+                <button onclick="changePeriod('7days', this)" class="period-btn active" style="padding: 6px 16px; border: none; background: <?php echo esc_attr($main_color); ?>; color: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">7 Days</button>
                 <button onclick="changePeriod('1month', this)" class="period-btn" style="padding: 6px 16px; border: none; background: transparent; color: #6b7280; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">1 Month</button>
                 <button onclick="changePeriod('1year', this)" class="period-btn" style="padding: 6px 16px; border: none; background: transparent; color: #6b7280; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;">1 Year</button>
             </div>
@@ -1038,7 +1045,7 @@ $pending_payout = $wpdb->get_row($wpdb->prepare(
         </div>
         
         <!-- Support Contact -->
-        <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; text-align: center;">
+        <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, <?php echo esc_attr($main_color); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%); border-radius: 12px; color: white; text-align: center;">
             <h3 style="margin: 0 0 10px 0;">Need Help?</h3>
             <p style="margin: 0; opacity: 0.9;">Have questions about your account or need support?</p>
             <p style="margin: 15px 0 0 0;">
@@ -1295,7 +1302,7 @@ function changePeriod(period, button) {
         btn.classList.remove('active');
     });
 
-    button.style.background = '#667eea';
+    button.style.background = '<?php echo esc_js($main_color); ?>';
     button.style.color = 'white';
     button.classList.add('active');
 
