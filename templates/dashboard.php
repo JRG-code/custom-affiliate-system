@@ -9,12 +9,24 @@ $affiliate = $wpdb->get_row($wpdb->prepare(
     $user_id
 ));
 
-// Get customizable dashboard color
-$main_color = cas_get_general_setting('dashboard_main_color');
-if (empty($main_color)) {
-    $main_color = get_theme_mod('primary_color', '#667eea');
+// Get customizable dashboard color with safety checks
+$main_color = '#667eea'; // Default fallback
+if (function_exists('cas_get_general_setting')) {
+    $saved_color = cas_get_general_setting('dashboard_main_color');
+    if (!empty($saved_color)) {
+        $main_color = $saved_color;
+    } elseif (function_exists('get_theme_mod')) {
+        $theme_color = get_theme_mod('primary_color');
+        if (!empty($theme_color)) {
+            $main_color = $theme_color;
+        }
+    }
 }
-$gradient_end = cas_adjust_brightness($main_color, -20);
+
+$gradient_end = '#764ba2'; // Default fallback
+if (function_exists('cas_adjust_brightness')) {
+    $gradient_end = cas_adjust_brightness($main_color, -20);
+}
 
 if (!$affiliate) {
     echo '<p>Não és um afiliado ativo. Contacta o suporte.</p>';

@@ -149,10 +149,16 @@ function cas_dashboard_main_color_field_callback() {
     // Default to website's primary color or fallback to purple gradient
     $default_color = get_theme_mod('primary_color', '#667eea');
     $value = isset($options['general']['dashboard_main_color']) ? $options['general']['dashboard_main_color'] : $default_color;
+
+    // Calculate gradient end color safely
+    $gradient_end = '#764ba2';
+    if (function_exists('cas_adjust_brightness')) {
+        $gradient_end = cas_adjust_brightness($value, -20);
+    }
     ?>
     <input type="color" name="cas_settings[general][dashboard_main_color]" value="<?php echo esc_attr($value); ?>" class="color-picker">
     <p class="description">Choose the main color for the influencer dashboard gradients. This will customize the header, buttons, and accent colors while maintaining the gradient style.</p>
-    <div style="margin-top: 10px; padding: 15px; background: linear-gradient(135deg, <?php echo esc_attr($value); ?> 0%, <?php echo esc_attr(cas_adjust_brightness($value, -20)); ?> 100%); color: white; border-radius: 8px; max-width: 300px;">
+    <div style="margin-top: 10px; padding: 15px; background: linear-gradient(135deg, <?php echo esc_attr($value); ?> 0%, <?php echo esc_attr($gradient_end); ?> 100%); color: white; border-radius: 8px; max-width: 300px;">
         <strong>Preview:</strong> This is how the gradient will look
     </div>
     <?php
