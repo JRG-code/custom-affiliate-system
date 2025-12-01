@@ -601,34 +601,34 @@ class Custom_Affiliate_System {
     public function track_commission($order_id) {
         global $wpdb;
 
-        error_log("=== AFFILIATE TRACKING START === Order ID: {$order_id}");
+        cas_debug_log("=== TRACKING START === Order ID: {$order_id}");
 
         $order = wc_get_order($order_id);
         if (!$order) {
-            error_log("AFFILIATE TRACKING: Order {$order_id} not found");
+            cas_debug_log("Order {$order_id} not found", 'error');
             return;
         }
 
         $coupons = $order->get_coupon_codes();
-        error_log("AFFILIATE TRACKING: Found " . count($coupons) . " coupons: " . implode(', ', $coupons));
+        cas_debug_log("Found " . count($coupons) . " coupons: " . implode(', ', $coupons));
 
         if (empty($coupons)) {
-            error_log("AFFILIATE TRACKING: No coupons found, skipping");
+            cas_debug_log("No coupons found, skipping");
             return;
         }
 
         foreach ($coupons as $coupon_code) {
-            error_log("AFFILIATE TRACKING: Processing coupon '{$coupon_code}'");
+            cas_debug_log("Processing coupon '{$coupon_code}'");
 
             $coupon = new WC_Coupon($coupon_code);
             $coupon_id = $coupon->get_id();
-            error_log("AFFILIATE TRACKING: Coupon ID: {$coupon_id}");
+            cas_debug_log("Coupon ID: {$coupon_id}");
 
             $affiliate_user_id = get_post_meta($coupon_id, '_affiliate_user_id', true);
-            error_log("AFFILIATE TRACKING: Affiliate User ID from meta: " . ($affiliate_user_id ? $affiliate_user_id : 'NONE'));
+            cas_debug_log("Affiliate User ID from meta: " . ($affiliate_user_id ? $affiliate_user_id : 'NONE'));
 
             if (!$affiliate_user_id) {
-                error_log("AFFILIATE TRACKING: No affiliate user ID found for coupon '{$coupon_code}', skipping");
+                cas_debug_log("No affiliate user ID found for coupon '{$coupon_code}', skipping", 'warning');
                 continue;
             }
 
@@ -638,15 +638,15 @@ class Custom_Affiliate_System {
             ));
 
             if (!$affiliate) {
-                error_log("AFFILIATE TRACKING: No active affiliate found for user ID {$affiliate_user_id}, skipping");
+                cas_debug_log("No active affiliate found for user ID {$affiliate_user_id}, skipping", 'warning');
                 continue;
             }
 
-            error_log("AFFILIATE TRACKING: Found affiliate ID {$affiliate->id}, tier: {$affiliate->tier}");
+            cas_debug_log("Found affiliate ID {$affiliate->id}, tier: {$affiliate->tier}");
 
             // FRAUD DETECTION: Check for self-referral based on tier settings
             if (cas_is_self_referral($order_id, $affiliate_user_id, $affiliate->tier)) {
-                error_log("AFFILIATE TRACKING: Self-referral detected and blocked for order {$order_id}");
+                cas_debug_log("Self-referral detected and blocked for order {$order_id}", 'warning');
                 continue;
             }
 
@@ -656,7 +656,7 @@ class Custom_Affiliate_System {
             ));
 
             if ($exists) {
-                error_log("AFFILIATE TRACKING: Referral already exists for order {$order_id}, skipping");
+                cas_debug_log("Referral already exists for order {$order_id}, skipping");
                 continue;
             }
 
@@ -664,7 +664,7 @@ class Custom_Affiliate_System {
             $commission_rate = $affiliate->commission_rate;
             $commission_amount = ($order_total * $commission_rate) / 100;
 
-            error_log("AFFILIATE TRACKING: Creating referral - Order Total: {$order_total}, Rate: {$commission_rate}%, Commission: {$commission_amount}");
+            cas_debug_log("Creating referral - Total: {$order_total}, Rate: {$commission_rate}%, Commission: {$commission_amount}");
 
             $wpdb->insert(
                 $wpdb->prefix . 'affiliate_referrals',
@@ -681,9 +681,9 @@ class Custom_Affiliate_System {
             );
 
             if ($wpdb->last_error) {
-                error_log("AFFILIATE TRACKING ERROR: Database insert failed - " . $wpdb->last_error);
+                cas_debug_log("Database insert failed - " . $wpdb->last_error, 'error');
             } else {
-                error_log("AFFILIATE TRACKING: Referral created successfully, ID: " . $wpdb->insert_id);
+                cas_debug_log("Referral created successfully, ID: " . $wpdb->insert_id);
             }
 
             $wpdb->query($wpdb->prepare(
@@ -699,16 +699,16 @@ class Custom_Affiliate_System {
             ));
 
             if ($wpdb->last_error) {
-                error_log("AFFILIATE TRACKING ERROR: Affiliate update failed - " . $wpdb->last_error);
+                cas_debug_log("Affiliate update failed - " . $wpdb->last_error, 'error');
             } else {
-                error_log("AFFILIATE TRACKING: Affiliate totals updated successfully");
+                cas_debug_log("Affiliate totals updated successfully");
             }
 
             $this->send_commission_email($affiliate_user_id, $coupon_code, $order_total, $commission_amount);
-            error_log("AFFILIATE TRACKING: Commission email sent");
+            cas_debug_log("Commission email sent");
         }
 
-        error_log("=== AFFILIATE TRACKING END ===");
+        cas_debug_log("=== TRACKING END ===");
     }
 
     // === HANDLE REFUNDS/CANCELLATIONS ===

@@ -130,6 +130,18 @@ function cas_adjust_brightness($hex, $percent) {
             . str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
 }
 
+/**
+ * Log message to error log only if debug mode is enabled
+ * @param string $message Message to log
+ * @param string $type Type of log (info, error, warning)
+ */
+function cas_debug_log($message, $type = 'info') {
+    if (cas_is_debug_enabled()) {
+        $prefix = strtoupper($type);
+        error_log("[AFFILIATE {$prefix}] {$message}");
+    }
+}
+
 function cas_check_settings_status() {
     $status = array('configured' => true, 'missing' => array());
     $options = get_option('cas_settings', array());
