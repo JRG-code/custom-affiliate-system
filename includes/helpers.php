@@ -35,7 +35,7 @@ function cas_get_tier_setting($tier, $field) {
  */
 function cas_get_general_setting($field) {
     $options = get_option('cas_settings', array());
-    $defaults = array('currency_symbol' => '€', 'support_email' => get_option('admin_email'), 'auto_approve' => 1, 'terms_page' => 0, 'dashboard_main_color' => get_theme_mod('primary_color', '#667eea'));
+    $defaults = array('currency_symbol' => '€', 'support_email' => get_option('admin_email'), 'auto_approve' => 1, 'terms_page' => 0);
 
     if (isset($options['general'][$field])) {
         return $options['general'][$field];
@@ -104,42 +104,16 @@ function cas_get_payment_timeline_text($tier) {
     return cas_get_tier_setting($tier, 'payment_days') . ' dias';
 }
 
-/**
- * Adjust color brightness for gradient effects
- * @param string $hex Hex color code
- * @param int $percent Percentage to adjust (-100 to 100)
- * @return string Adjusted hex color
- */
+// Adjust color brightness for gradients
 function cas_adjust_brightness($hex, $percent) {
-    // Remove # if present
     $hex = str_replace('#', '', $hex);
-
-    // Convert to RGB
     $r = hexdec(substr($hex, 0, 2));
     $g = hexdec(substr($hex, 2, 2));
     $b = hexdec(substr($hex, 4, 2));
-
-    // Adjust brightness
     $r = max(0, min(255, $r + ($r * $percent / 100)));
     $g = max(0, min(255, $g + ($g * $percent / 100)));
     $b = max(0, min(255, $b + ($b * $percent / 100)));
-
-    // Convert back to hex
-    return '#' . str_pad(dechex($r), 2, '0', STR_PAD_LEFT)
-            . str_pad(dechex($g), 2, '0', STR_PAD_LEFT)
-            . str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
-}
-
-/**
- * Log message to error log only if debug mode is enabled
- * @param string $message Message to log
- * @param string $type Type of log (info, error, warning)
- */
-function cas_debug_log($message, $type = 'info') {
-    if (cas_is_debug_enabled()) {
-        $prefix = strtoupper($type);
-        error_log("[AFFILIATE {$prefix}] {$message}");
-    }
+    return '#' . str_pad(dechex($r), 2, '0', STR_PAD_LEFT) . str_pad(dechex($g), 2, '0', STR_PAD_LEFT) . str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
 }
 
 function cas_check_settings_status() {
@@ -188,7 +162,6 @@ function cas_init_default_settings() {
             'auto_approve' => 1,
             'send_welcome_email' => 1,
             'terms_page' => 0,
-            'dashboard_main_color' => get_theme_mod('primary_color', '#667eea'),
             'auto_payouts_enabled' => 0,
             'payout_schedule' => 'monthly'
         ))
@@ -216,7 +189,6 @@ function cas_repair_incomplete_settings() {
             'auto_approve' => 1,
             'send_welcome_email' => 1,
             'terms_page' => 0,
-            'dashboard_main_color' => get_theme_mod('primary_color', '#667eea'),
             'auto_payouts_enabled' => 0,
             'payout_schedule' => 'monthly'
         ))
