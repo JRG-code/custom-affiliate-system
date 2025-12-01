@@ -92,6 +92,7 @@ class Custom_Affiliate_System {
         add_settings_field('auto_approve', 'Auto-Approve New Affiliates', 'cas_auto_approve_field_callback', 'cas-settings', 'cas_general_section');
         add_settings_field('send_welcome_email', 'Send Welcome Email', 'cas_send_welcome_email_field_callback', 'cas-settings', 'cas_general_section');
         add_settings_field('terms_page', 'Terms & Conditions Page', 'cas_terms_page_field_callback', 'cas-settings', 'cas_general_section');
+        add_settings_field('dashboard_main_color', 'Dashboard Main Color', 'cas_dashboard_main_color_field_callback', 'cas-settings', 'cas_general_section');
 
         // Automatic Payouts Section
         add_settings_section('cas_payouts_section', '💰 Automatic Payouts', 'cas_payouts_section_callback', 'cas-settings');
@@ -600,20 +601,34 @@ class Custom_Affiliate_System {
     public function track_commission($order_id) {
         global $wpdb;
 
+        cas_debug_log("=== TRACKING START === Order ID: {$order_id}");
+
         $order = wc_get_order($order_id);
-        if (!$order) return;
+        if (!$order) {
+            cas_debug_log("Order {$order_id} not found", 'error');
+            return;
+        }
 
         $coupons = $order->get_coupon_codes();
+        cas_debug_log("Found " . count($coupons) . " coupons: " . implode(', ', $coupons));
 
         if (empty($coupons)) {
+            cas_debug_log("No coupons found, skipping");
             return;
         }
 
         foreach ($coupons as $coupon_code) {
+            cas_debug_log("Processing coupon '{$coupon_code}'");
+
             $coupon = new WC_Coupon($coupon_code);
-            $affiliate_user_id = get_post_meta($coupon->get_id(), '_affiliate_user_id', true);
+            $coupon_id = $coupon->get_id();
+            cas_debug_log("Coupon ID: {$coupon_id}");
+
+            $affiliate_user_id = get_post_meta($coupon_id, '_affiliate_user_id', true);
+            cas_debug_log("Affiliate User ID from meta: " . ($affiliate_user_id ? $affiliate_user_id : 'NONE'));
 
             if (!$affiliate_user_id) {
+                cas_debug_log("No affiliate user ID found for coupon '{$coupon_code}', skipping", 'warning');
                 continue;
             }
 
@@ -623,28 +638,34 @@ class Custom_Affiliate_System {
             ));
 
             if (!$affiliate) {
+                cas_debug_log("No active affiliate found for user ID {$affiliate_user_id}, skipping", 'warning');
                 continue;
             }
 
+            cas_debug_log("Found affiliate ID {$affiliate->id}, tier: {$affiliate->tier}");
+
             // FRAUD DETECTION: Check for self-referral based on tier settings
             if (cas_is_self_referral($order_id, $affiliate_user_id, $affiliate->tier)) {
-                // Self-referral blocked for this tier
+                cas_debug_log("Self-referral detected and blocked for order {$order_id}", 'warning');
                 continue;
             }
-            
+
             $exists = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}affiliate_referrals WHERE order_id = %d",
                 $order_id
             ));
-            
+
             if ($exists) {
+                cas_debug_log("Referral already exists for order {$order_id}, skipping");
                 continue;
             }
-            
+
             $order_total = $order->get_total();
             $commission_rate = $affiliate->commission_rate;
             $commission_amount = ($order_total * $commission_rate) / 100;
-            
+
+            cas_debug_log("Creating referral - Total: {$order_total}, Rate: {$commission_rate}%, Commission: {$commission_amount}");
+
             $wpdb->insert(
                 $wpdb->prefix . 'affiliate_referrals',
                 array(
@@ -658,9 +679,15 @@ class Custom_Affiliate_System {
                 ),
                 array('%d', '%d', '%s', '%f', '%f', '%f', '%s')
             );
-            
+
+            if ($wpdb->last_error) {
+                cas_debug_log("Database insert failed - " . $wpdb->last_error, 'error');
+            } else {
+                cas_debug_log("Referral created successfully, ID: " . $wpdb->insert_id);
+            }
+
             $wpdb->query($wpdb->prepare(
-                "UPDATE {$wpdb->prefix}affiliates 
+                "UPDATE {$wpdb->prefix}affiliates
                 SET total_sales = total_sales + %f,
                     total_commission = total_commission + %f,
                     unpaid_commission = unpaid_commission + %f
@@ -670,9 +697,18 @@ class Custom_Affiliate_System {
                 $commission_amount,
                 $affiliate->id
             ));
-            
+
+            if ($wpdb->last_error) {
+                cas_debug_log("Affiliate update failed - " . $wpdb->last_error, 'error');
+            } else {
+                cas_debug_log("Affiliate totals updated successfully");
+            }
+
             $this->send_commission_email($affiliate_user_id, $coupon_code, $order_total, $commission_amount);
+            cas_debug_log("Commission email sent");
         }
+
+        cas_debug_log("=== TRACKING END ===");
     }
 
     // === HANDLE REFUNDS/CANCELLATIONS ===
@@ -1629,13 +1665,23 @@ class Custom_Affiliate_System {
         array($this, 'admin_advanced_features_page')
     );
 
+    // Diagnostics
+    add_submenu_page(
+        'affiliate-system',
+        'Diagnostics',
+        'Diagnostics',
+        'manage_options',
+        'affiliate-diagnostics',
+        array($this, 'admin_diagnostics_page')
+    );
+
     if (cas_is_debug_enabled()) {
         add_submenu_page(
-            'affiliate-system', 
-            'Debug Log', 
-            'Debug Log', 
-            'manage_options', 
-            'affiliate-debug', 
+            'affiliate-system',
+            'Debug Log',
+            'Debug Log',
+            'manage_options',
+            'affiliate-debug',
             array($this, 'admin_debug_page')
         );
     }
@@ -1715,6 +1761,13 @@ class Custom_Affiliate_System {
 
     public function admin_advanced_features_page() {
         $file = CAS_PLUGIN_DIR . 'admin/advanced-features.php';
+        if (file_exists($file)) {
+            include $file;
+        }
+    }
+
+    public function admin_diagnostics_page() {
+        $file = CAS_PLUGIN_DIR . 'admin/diagnostics.php';
         if (file_exists($file)) {
             include $file;
         }
