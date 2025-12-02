@@ -7,14 +7,13 @@ if (!defined('ABSPATH')) exit;
 
 global $wpdb;
 
-// Get recent orders with coupons
-$recent_orders = $wpdb->get_results("
-    SELECT p.ID, p.post_date, p.post_status
-    FROM {$wpdb->posts} p
-    WHERE p.post_type = 'shop_order'
-    ORDER BY p.post_date DESC
-    LIMIT 20
-");
+// Get recent orders (HPOS compatible)
+$recent_orders = wc_get_orders(array(
+    'limit' => 20,
+    'orderby' => 'date',
+    'order' => 'DESC',
+    'return' => 'ids'
+));
 
 // Get all affiliate coupons
 $affiliate_coupons = $wpdb->get_results("
@@ -197,24 +196,31 @@ $recent_referrals = $wpdb->get_results("
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($recent_orders as $order_post):
-                    $order = wc_get_order($order_post->ID);
-                    if (!$order) continue;
-
-                    $coupons = $order->get_coupon_codes();
-                    $has_tracking = $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_referrals WHERE order_id = %d",
-                        $order_post->ID
-                    ));
-                ?>
+                <?php
+                if (empty($recent_orders)): ?>
                 <tr>
-                    <td><a href="<?php echo admin_url('post.php?post=' . $order_post->ID . '&action=edit'); ?>">#<?php echo $order_post->ID; ?></a></td>
-                    <td><?php echo date('Y-m-d H:i', strtotime($order_post->post_date)); ?></td>
-                    <td><?php echo $order->get_status(); ?></td>
-                    <td><?php echo empty($coupons) ? '-' : implode(', ', $coupons); ?></td>
-                    <td><?php echo $has_tracking ? '<span style="color: green;">✓</span>' : '<span style="color: red;">✗</span>'; ?></td>
+                    <td colspan="5" style="text-align: center; color: #999;">No orders found</td>
                 </tr>
-                <?php endforeach; ?>
+                <?php else:
+                    foreach ($recent_orders as $order_id):
+                        $order = wc_get_order($order_id);
+                        if (!$order) continue;
+
+                        $coupons = $order->get_coupon_codes();
+                        $has_tracking = $wpdb->get_var($wpdb->prepare(
+                            "SELECT COUNT(*) FROM {$wpdb->prefix}affiliate_referrals WHERE order_id = %d",
+                            $order_id
+                        ));
+                    ?>
+                    <tr>
+                        <td><a href="<?php echo esc_url($order->get_edit_order_url()); ?>">#<?php echo $order_id; ?></a></td>
+                        <td><?php echo $order->get_date_created()->date('Y-m-d H:i'); ?></td>
+                        <td><?php echo $order->get_status(); ?></td>
+                        <td><?php echo empty($coupons) ? '-' : implode(', ', $coupons); ?></td>
+                        <td><?php echo $has_tracking ? '<span style="color: green;">✓</span>' : '<span style="color: red;">✗</span>'; ?></td>
+                    </tr>
+                    <?php endforeach;
+                endif; ?>
             </tbody>
         </table>
     </div>
