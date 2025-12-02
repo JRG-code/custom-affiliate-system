@@ -35,6 +35,13 @@ if (file_exists(plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update
     }
 }
 
+// Declare WooCommerce HPOS compatibility
+add_action('before_woocommerce_init', function() {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+    }
+});
+
 // Define constants
 define('CAS_VERSION', '2.2.0');
 define('CAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -247,8 +254,12 @@ class Custom_Affiliate_System {
         // Hooks
         add_action('user_register', array($this, 'auto_create_affiliate'), 10, 1);
         add_action('woocommerce_created_customer', array($this, 'auto_create_affiliate'), 10, 1);
+
+        // Order status hooks (HPOS compatible)
         add_action('woocommerce_order_status_completed', array($this, 'track_commission'), 10, 1);
         add_action('woocommerce_order_status_processing', array($this, 'track_commission'), 10, 1);
+        add_action('woocommerce_order_status_changed', array($this, 'track_commission_on_status_change'), 10, 4);
+
         add_action('woocommerce_order_status_refunded', array($this, 'handle_refund'), 10, 1);
         add_action('woocommerce_order_status_cancelled', array($this, 'handle_refund'), 10, 1);
         add_action('woocommerce_order_fully_refunded', array($this, 'handle_refund'), 10, 1);
@@ -597,7 +608,18 @@ class Custom_Affiliate_System {
     }
     
     // === TRACK COMMISSIONS ===
-    
+
+    /**
+     * Handle commission tracking when order status changes (HPOS compatible hook)
+     */
+    public function track_commission_on_status_change($order_id, $old_status, $new_status, $order) {
+        // Only track when status changes to processing or completed
+        if (in_array($new_status, array('processing', 'completed'))) {
+            cas_debug_log("Order #{$order_id} status changed from {$old_status} to {$new_status} - tracking commission");
+            $this->track_commission($order_id);
+        }
+    }
+
     public function track_commission($order_id) {
         global $wpdb;
 
