@@ -697,9 +697,10 @@ class Custom_Affiliate_System {
                     'order_total' => $order_total,
                     'commission_amount' => $commission_amount,
                     'commission_rate' => $commission_rate,
-                    'status' => 'unpaid'
+                    'status' => 'unpaid',
+                    'created_at' => current_time('mysql')
                 ),
-                array('%d', '%d', '%s', '%f', '%f', '%f', '%s')
+                array('%d', '%d', '%s', '%f', '%f', '%f', '%s', '%s')
             );
 
             if ($wpdb->last_error) {
