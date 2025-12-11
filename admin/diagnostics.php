@@ -7,6 +7,19 @@ if (!defined('ABSPATH')) exit;
 
 global $wpdb;
 
+// Handle debug mode toggle
+if (isset($_POST['toggle_debug'])) {
+    $current = get_option('cas_debug_enabled', false);
+    update_option('cas_debug_enabled', !$current);
+    echo '<div class="notice notice-success"><p>Debug mode ' . (!$current ? 'enabled' : 'disabled') . '</p></div>';
+}
+
+// Handle clear logs
+if (isset($_POST['clear_debug_logs'])) {
+    $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}affiliate_debug_log");
+    echo '<div class="notice notice-success"><p>Debug logs cleared</p></div>';
+}
+
 // Get recent orders (HPOS compatible)
 $recent_orders = wc_get_orders(array(
     'limit' => 20,
@@ -35,10 +48,62 @@ $recent_referrals = $wpdb->get_results("
     LIMIT 10
 ");
 
+// Get debug logs (if table exists)
+$debug_logs = array();
+$debug_enabled = cas_is_debug_enabled();
+if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}affiliate_debug_log'") == $wpdb->prefix . 'affiliate_debug_log') {
+    $debug_logs = $wpdb->get_results("
+        SELECT * FROM {$wpdb->prefix}affiliate_debug_log
+        ORDER BY timestamp DESC
+        LIMIT 50
+    ");
+}
+
 ?>
 
 <div class="wrap">
     <h1>🔍 Affiliate System Diagnostics</h1>
+
+    <!-- Debug Mode Toggle -->
+    <div class="card" style="max-width: 800px; margin: 20px 0; background: <?php echo $debug_enabled ? '#fef3c7' : '#f3f4f6'; ?>;">
+        <h2>🐛 Debug Mode</h2>
+        <p><strong>Status:</strong> <?php echo $debug_enabled ? '<span style="color: #f59e0b;">⚠️ ENABLED</span>' : '<span style="color: #6b7280;">Disabled</span>'; ?></p>
+        <p style="font-size: 13px; color: #6b7280;">When enabled, the system logs all tracking attempts and decisions. Use this to troubleshoot why commissions aren't being tracked automatically.</p>
+        <form method="post" action="" style="display: inline;">
+            <button type="submit" name="toggle_debug" class="button button-secondary">
+                <?php echo $debug_enabled ? 'Disable Debug Mode' : 'Enable Debug Mode'; ?>
+            </button>
+        </form>
+        <?php if (!empty($debug_logs)): ?>
+        <form method="post" action="" style="display: inline; margin-left: 10px;">
+            <button type="submit" name="clear_debug_logs" class="button button-secondary" onclick="return confirm('Clear all debug logs?')">Clear Logs</button>
+        </form>
+        <?php endif; ?>
+    </div>
+
+    <!-- Debug Logs -->
+    <?php if ($debug_enabled && !empty($debug_logs)): ?>
+    <div class="card" style="max-width: 100%; margin: 20px 0;">
+        <h2>📋 Debug Logs (Last 50)</h2>
+        <div style="background: #1f2937; color: #e5e7eb; padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+            <?php foreach ($debug_logs as $log):
+                $color = $log->type === 'error' ? '#ef4444' : ($log->type === 'warning' ? '#f59e0b' : '#10b981');
+                $icon = $log->type === 'error' ? '❌' : ($log->type === 'warning' ? '⚠️' : 'ℹ️');
+            ?>
+            <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #374151;">
+                <span style="color: #9ca3af;">[<?php echo $log->timestamp; ?>]</span>
+                <span style="color: <?php echo $color; ?>;"><?php echo $icon; ?> <?php echo strtoupper($log->type); ?></span>
+                <span style="color: #e5e7eb;">: <?php echo esc_html($log->message); ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php elseif ($debug_enabled && empty($debug_logs)): ?>
+    <div class="card" style="max-width: 800px; margin: 20px 0;">
+        <h2>📋 Debug Logs</h2>
+        <p style="color: #6b7280; text-align: center; padding: 20px;">No logs yet. Create a test order to see tracking logs appear here.</p>
+    </div>
+    <?php endif; ?>
 
     <!-- Manual Order Check -->
     <div class="card" style="max-width: 800px; margin: 20px 0;">

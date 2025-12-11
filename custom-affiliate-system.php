@@ -260,6 +260,10 @@ class Custom_Affiliate_System {
         add_action('woocommerce_order_status_processing', array($this, 'track_commission'), 10, 1);
         add_action('woocommerce_order_status_changed', array($this, 'track_commission_on_status_change'), 10, 4);
 
+        // Catch orders created directly with processing/completed status (no status change)
+        add_action('woocommerce_checkout_order_processed', array($this, 'track_commission'), 10, 1);
+        add_action('woocommerce_payment_complete', array($this, 'track_commission'), 10, 1);
+
         add_action('woocommerce_order_status_refunded', array($this, 'handle_refund'), 10, 1);
         add_action('woocommerce_order_status_cancelled', array($this, 'handle_refund'), 10, 1);
         add_action('woocommerce_order_fully_refunded', array($this, 'handle_refund'), 10, 1);
@@ -697,9 +701,10 @@ class Custom_Affiliate_System {
                     'order_total' => $order_total,
                     'commission_amount' => $commission_amount,
                     'commission_rate' => $commission_rate,
-                    'status' => 'unpaid'
+                    'status' => 'unpaid',
+                    'created_at' => current_time('mysql')
                 ),
-                array('%d', '%d', '%s', '%f', '%f', '%f', '%s')
+                array('%d', '%d', '%s', '%f', '%f', '%f', '%s', '%s')
             );
 
             if ($wpdb->last_error) {
